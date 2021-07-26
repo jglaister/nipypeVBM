@@ -22,6 +22,7 @@ def create_bet_workflow(output_root):
                          iterfield=['in_file'],
                          name='fsl_bet')
     fsl_bet.inputs.frac = 0.4
+    fsl_bet.inputs.mask = True
     wf.connect(input_node, 'struct_files', fsl_bet, 'in_file')
 
     output_node = pe.Node(
