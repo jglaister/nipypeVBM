@@ -6,7 +6,7 @@ import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
 
-def create_bet_workflow(output_root, scan_directory, scan_suffix):
+def create_bet_workflow(output_root):
     # Set up workflow
     wf = pe.Workflow(name='fslvbm_1_bet',base_dir=os.path.join(output_root, 'fslvbm_1_bet'))
 
