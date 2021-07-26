@@ -20,6 +20,5 @@ args = dict(
 )
 
 setup(install_requires=['nipype', 'numpy', 'nibabel'],
-      packages=['nipypevbm'],
       scripts=glob('bin/*'), **args)
 
