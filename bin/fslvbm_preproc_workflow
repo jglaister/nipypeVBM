@@ -1,0 +1,27 @@
+#! /usr/bin/env python
+import argparse
+import os
+
+from nipypeVBM.workflows import create_preproc_workflow
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--struct-files', nargs='+', type=str, required=True)
+    parser.add_argument('-o', '--output-root', type=str, default=os.getcwd())
+    parser.add_argument('-t', '--num_threads', type=int, default=1)
+    args = parser.parse_args()
+
+    if args.struct_files is not None:
+        args.struct_files = [os.path.abspath(os.path.expanduser(image)) for image in args.struct_files]
+
+    wf = create_preproc_workflow(args.output_root)
+
+    if args.struct_files is not None:
+        wf.inputs.input_node.struct_files = args.struct_files
+
+    if args.num_threads == 1:
+        wf.run()
+    else:
+        wf.run(plugin='MultiProc', plugin_args={'n_procs': args.num_threads})
+
+

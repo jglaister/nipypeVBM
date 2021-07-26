@@ -5,6 +5,23 @@ import nipype.interfaces.fsl as fsl
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
+import interfaces
+
+
+def create_nipypevbm_workflow(output_root):
+    wf_root = os.path.join(output_root, 'nipypevbm')
+    wf = pe.Workflow(name='nipypevbm', base_dir=wf_root)
+
+    input_node = pe.Node(
+        interface=util.IdentityInterface(
+            fields=['struct_files', 'GM_template', 'designmat', 'designcon']),
+        name='input_node')
+
+    bet_workflow = create_bet_workflow(wf_root)
+    wf.connect(input_node, 'struct_files', bet_workflow.inputs.input_node.struct_files, 'struct_files')
+
+    preproc_workflow = create_preproc_workflow(wf_root)
+    wf.connect(bet_workflow.output_node, 'struct_files', bet_workflow.inputs.input_node.struct_files, 'struct_files')
 
 def create_bet_workflow(output_root):
     # Set up workflow
@@ -45,7 +62,7 @@ def create_preproc_workflow(output_root):
                           name='fsl_fast')
     fsl_fast.inputs.mixel_smooth = 0.3
     fsl_fast.inputs.hyper = 0.1
-    wf.connect(input_node, 'input_files', fsl_fast, 'in_files')
+    wf.connect(input_node, 'struct_files', fsl_fast, 'in_files')
 
     split_priors = pe.MapNode(interface=util.Split(),
                               iterfield=['inlist'],
@@ -61,11 +78,14 @@ def create_preproc_workflow(output_root):
     #Use defaults for now
     wf.connect(split_priors, 'out3', affine_reg_to_GM, 'in_file')
 
-    #TODO: Replace
-    affine_template = pe.MapNode(interface=fsl.Merge(),
-                              name='affine_merge')
-    affine_template.inputs.dimension = 't'
-    wf.connect(affine_reg_to_GM, 'out_file', affine_template, 'in_files')
+    affine_4D_template = pe.Node(interface=fsl.Merge(),
+                              name='affine_4D_template')
+    affine_4D_template.inputs.dimension = 't'
+    wf.connect(affine_reg_to_GM, 'out_file', affine_4D_template, 'in_files')
+
+    affine_template = pe.MapNode(interface=interfaces.GenerateTemplate(),
+                              name='affine_template')
+    wf.connect(affine_4D_template, 'merged_file', affine_template, 'in_file')
 
     #Nonlinear registration to initial template
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
@@ -73,14 +93,29 @@ def create_preproc_workflow(output_root):
                                   name='affine_reg_to_GM')
     # Use defaults for now
     wf.connect(split_priors, 'out3', nonlinear_reg_to_temp, 'in_file')
-    wf.connect(affine_template, 'out', nonlinear_reg_to_temp, 'reference')
+    wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'reference')
 
     nonlinear_template = pe.MapNode(interface=fsl.Merge(),
                               name='affine_merge')
     nonlinear_reg_to_temp.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'warped_file ', nonlinear_template, 'in_files')
 
+    nonlinear_4D_template = pe.Node(interface=fsl.Merge(),
+                                 name='nonlinear_4D_template')
+    nonlinear_4D_template.inputs.dimension = 't'
+    wf.connect(nonlinear_reg_to_temp, 'out_file', nonlinear_4D_template, 'in_files')
 
+    nonlinear_template = pe.MapNode(interface=interfaces.GenerateTemplate(),
+                                 name='nonlinear_template')
+    wf.connect(nonlinear_4D_template, 'merged_file', nonlinear_template, 'in_file')
+
+    output_node = pe.Node(
+        interface=util.IdentityInterface(fields=['template_file', 'GM_files']),
+        name='output_node')
+    wf.connect(nonlinear_4D_template, 'template_file', output_node, 'template_file')
+    wf.connect(split_priors, 'out3', output_node, 'out_files')
+
+    return wf
     #fsl_reg $OUTPUT / bet /${SUBID}_GM $GPRIORS $OUTPUT / bet /${SUBID}_GM_to_T - a
 
 
