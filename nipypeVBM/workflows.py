@@ -25,10 +25,12 @@ def create_bet_workflow(output_root):
     wf.connect(input_node, 'struct_files', fsl_bet, 'in_file')
 
     output_node = pe.Node(
-        interface=util.IdentityInterface(fields=['mask_files','out_files']),
+        interface=util.IdentityInterface(fields=['mask_files', 'out_files']),
         name='output_node')
     wf.connect(fsl_bet, 'mask_file', output_node, 'mask_files')
     wf.connect(fsl_bet, 'out_file', output_node, 'out_files')
+
+    return wf
 
 def create_preproc_workflow(output_root):
     wf = pe.Workflow(name='fslvbm_2_template', base_dir=os.path.join(output_root,'fslvbm_2_template'))
