@@ -21,7 +21,7 @@ def create_nipypevbm_workflow(output_root):
     wf.connect(input_node, 'struct_files', bet_workflow.inputs.input_node.struct_files, 'struct_files')
 
     preproc_workflow = create_preproc_workflow(wf_root)
-    wf.connect(bet_workflow.output_node, 'struct_files', bet_workflow.inputs.input_node.struct_files, 'struct_files')
+    wf.connect(bet_workflow.output_node, 'brain_files', bet_workflow.inputs.input_node.struct_files, 'brain_files')
 
 def create_bet_workflow(output_root):
     # Set up workflow
@@ -42,11 +42,12 @@ def create_bet_workflow(output_root):
     fsl_bet.inputs.mask = True
     wf.connect(input_node, 'struct_files', fsl_bet, 'in_file')
 
+    # Set up output node with brain mask and masked brains
     output_node = pe.Node(
-        interface=util.IdentityInterface(fields=['mask_files', 'out_files']),
+        interface=util.IdentityInterface(fields=['mask_files', 'brain_files']),
         name='output_node')
     wf.connect(fsl_bet, 'mask_file', output_node, 'mask_files')
-    wf.connect(fsl_bet, 'out_file', output_node, 'out_files')
+    wf.connect(fsl_bet, 'out_file', output_node, 'brain_files')
 
     return wf
 
@@ -54,7 +55,7 @@ def create_preproc_workflow(output_root):
     wf = pe.Workflow(name='fslvbm_2_template', base_dir=os.path.join(output_root,'fslvbm_2_template'))
 
     input_node = pe.Node(
-        interface=util.IdentityInterface(fields=['struct_files','GM_template']),
+        interface=util.IdentityInterface(fields=['brain_files','GM_template']),
         name='input_node')
 
     fsl_fast = pe.MapNode(interface=fsl.FAST(),
@@ -75,7 +76,7 @@ def create_preproc_workflow(output_root):
                                   iterfield=['in_file'],
                                   name='affine_reg_to_GM')
     #Use defaults for now
-    wf.connect(split_priors, 'out3', affine_reg_to_GM, 'in_file')
+    wf.connect(split_priors, 'out1', affine_reg_to_GM, 'in_file')
     wf.connect(input_node, 'GM_template', affine_reg_to_GM, 'reference')
 
     affine_4d_template = pe.Node(interface=fsl.Merge(),
