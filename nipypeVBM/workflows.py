@@ -95,14 +95,14 @@ def create_preproc_workflow(output_root):
                                        iterfield=['in_file'],
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
-    nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
+    #nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
     wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
 
     nonlinear_4d_template = pe.Node(interface=fsl.Merge(),
                                     name='nonlinear_4d_template')
     nonlinear_4d_template.inputs.dimension = 't'
-    wf.connect(nonlinear_reg_to_temp, 'warped_file ', nonlinear_4d_template, 'in_files')
+    wf.connect(nonlinear_reg_to_temp, 'warped_file', nonlinear_4d_template, 'in_files')
     '''
     nonlinear_template = pe.MapNode(interface=GenerateTemplate(),
                                     name='nonlinear_template')
