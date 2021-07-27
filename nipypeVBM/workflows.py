@@ -79,41 +79,43 @@ def create_preproc_workflow(output_root):
     wf.connect(split_priors, 'out3', affine_reg_to_GM, 'in_file')
     wf.connect(input_node, 'GM_template', affine_reg_to_GM, 'reference')
 
-    affine_4D_template = pe.Node(interface=fsl.Merge(),
-                              name='affine_4D_template')
-    affine_4D_template.inputs.dimension = 't'
-    wf.connect(affine_reg_to_GM, 'out_file', affine_4D_template, 'in_files')
+    affine_4d_template = pe.Node(interface=fsl.Merge(),
+                                 name='affine_4D_template')
+    affine_4d_template.inputs.dimension = 't'
+    wf.connect(affine_reg_to_GM, 'out_file', affine_4d_template, 'in_files')
 
     affine_template = pe.MapNode(interface=GenerateTemplate(),
-                              name='affine_template')
-    wf.connect(affine_4D_template, 'merged_file', affine_template, 'in_file')
+                                 iterfield=['in_file'],
+                                 name='affine_template')
+    wf.connect(affine_4d_template, 'merged_file', affine_template, 'in_file')
 
     #Nonlinear registration to initial template
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-                                  iterfield=['in_file'],
-                                  name='affine_reg_to_GM')
+                                       iterfield=['in_file'],
+                                       name='affine_reg_to_GM')
     # Use defaults for now
     wf.connect(split_priors, 'out3', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'reference')
 
     nonlinear_template = pe.MapNode(interface=fsl.Merge(),
-                              name='affine_merge')
+                                    iterfield=['in_file'],
+                                    name='affine_merge')
     nonlinear_reg_to_temp.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'warped_file ', nonlinear_template, 'in_files')
 
-    nonlinear_4D_template = pe.Node(interface=fsl.Merge(),
-                                 name='nonlinear_4D_template')
-    nonlinear_4D_template.inputs.dimension = 't'
-    wf.connect(nonlinear_reg_to_temp, 'out_file', nonlinear_4D_template, 'in_files')
+    nonlinear_4d_template = pe.Node(interface=fsl.Merge(),
+                                    name='nonlinear_4D_template')
+    nonlinear_4d_template.inputs.dimension = 't'
+    wf.connect(nonlinear_reg_to_temp, 'out_file', nonlinear_4d_template, 'in_files')
 
     nonlinear_template = pe.MapNode(interface=GenerateTemplate(),
                                  name='nonlinear_template')
-    wf.connect(nonlinear_4D_template, 'merged_file', nonlinear_template, 'in_file')
+    wf.connect(nonlinear_4d_template, 'merged_file', nonlinear_template, 'in_file')
 
     output_node = pe.Node(
         interface=util.IdentityInterface(fields=['template_file', 'GM_files']),
         name='output_node')
-    wf.connect(nonlinear_4D_template, 'template_file', output_node, 'template_file')
+    wf.connect(nonlinear_4d_template, 'template_file', output_node, 'template_file')
     wf.connect(split_priors, 'out3', output_node, 'out_files')
 
     return wf
