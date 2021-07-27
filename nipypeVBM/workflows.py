@@ -95,7 +95,7 @@ def create_preproc_workflow(output_root):
                                        iterfield=['in_file'],
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
-    #nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
+    nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
     wf.connect(split_priors, 'out3', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
 
