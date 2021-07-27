@@ -63,7 +63,7 @@ def create_preproc_workflow(output_root):
                           name='fsl_fast')
     fsl_fast.inputs.mixel_smooth = 0.3
     fsl_fast.inputs.hyper = 0.1
-    wf.connect(input_node, 'struct_files', fsl_fast, 'in_files')
+    wf.connect(input_node, 'brain_files', fsl_fast, 'in_files')
 
     split_priors = pe.MapNode(interface=util.Split(),
                               iterfield=['inlist'],
