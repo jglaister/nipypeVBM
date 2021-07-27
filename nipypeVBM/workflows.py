@@ -120,7 +120,6 @@ def create_preproc_workflow(output_root):
     wf.connect(split_priors, 'out2', output_node, 'GM_files')
 
     return wf
-    #fsl_reg $OUTPUT / bet /${SUBID}_GM $GPRIORS $OUTPUT / bet /${SUBID}_GM_to_T - a
 
 
 def create_proc_workflow(output_root, sigma=3):
@@ -134,7 +133,6 @@ def create_proc_workflow(output_root, sigma=3):
                                        iterfield=['in_file'],
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
-    # nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
     config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
     if os.path.exists(config_file):
         nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
@@ -179,6 +177,7 @@ def create_proc_workflow(output_root, sigma=3):
     wf.connect(gaussian_filter, 'design_mat', init_randomise, 'design_mat')
     wf.connect(gaussian_filter, 'tcon', init_randomise, 'tcon')
 
+    return wf
     #final_randomise = pe.Node(interface=fsl.model.Randomise(), name='randomise')
 
 

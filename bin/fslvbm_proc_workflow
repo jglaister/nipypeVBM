@@ -1,0 +1,44 @@
+#! /usr/bin/env python
+import argparse
+import os
+
+from nipypeVBM.workflows import create_proc_workflow
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--GM-files', nargs='+', type=str, required=True)
+    parser.add_argument('-g', '--GM-template', type=str, required=True)
+    parser.add_argument('--design-mat', type=str, required=True)
+    parser.add_argument('--tcon', type=str, required=True)
+    parser.add_argument('-s', '--sigma', type=int)
+    parser.add_argument('-o', '--output-root', type=str, default=os.getcwd())
+    parser.add_argument('-t', '--num_threads', type=int, default=1)
+    args = parser.parse_args()
+
+    if args.brain_files is not None:
+        args.brain_files = [os.path.abspath(os.path.expanduser(image)) for image in args.brain_files]
+
+    if args.GM_template is not None:
+        args.GM_template = os.path.abspath(os.path.expanduser(args.GM_template))
+
+    if args.design_mat is not None:
+        args.design_mat = os.path.abspath(os.path.expanduser(args.design_mat))
+
+    if args.tcon is not None:
+        args.tcon = os.path.abspath(os.path.expanduser(args.tcon))
+
+    wf = create_proc_workflow(args.output_root, args.sigma)
+
+    if args.brain_files is not None:
+        wf.inputs.input_node.brain_files = args.brain_files
+    if args.GM_template is not None:
+        wf.inputs.input_node.GM_template = args.GM_template
+    if args.design_mat is not None:
+        wf.inputs.input_node.design_mat = args.design_mat
+    if args.tcon is not None:
+        wf.inputs.input_node.tcon = args.tcon
+
+    if args.num_threads == 1:
+        wf.run()
+    else:
+        wf.run(plugin='MultiProc', plugin_args={'n_procs': args.num_threads})
