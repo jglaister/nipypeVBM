@@ -96,6 +96,10 @@ def create_preproc_workflow(output_root):
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
     #nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
+    config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    if os.path.exists(config_file):
+        nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+                                                                'GM_2_MNI152GM_2mm.cnf')
     wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
 
@@ -104,6 +108,7 @@ def create_preproc_workflow(output_root):
     nonlinear_4d_template.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'warped_file', nonlinear_4d_template, 'in_files')
 
+    #TODO: Allow for variable size cohorts instead of matched sizes
     nonlinear_template = pe.Node(interface=GenerateTemplate(),
                                  name='nonlinear_template')
     wf.connect(nonlinear_4d_template, 'merged_file', nonlinear_template, 'input_file')
@@ -113,7 +118,6 @@ def create_preproc_workflow(output_root):
         name='output_node')
     wf.connect(nonlinear_4d_template, 'template_file', output_node, 'GM_template')
     wf.connect(split_priors, 'out2', output_node, 'GM_files')
-
 
     return wf
     #fsl_reg $OUTPUT / bet /${SUBID}_GM $GPRIORS $OUTPUT / bet /${SUBID}_GM_to_T - a
