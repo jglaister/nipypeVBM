@@ -116,7 +116,7 @@ def create_preproc_workflow(output_root):
     output_node = pe.Node(
         interface=util.IdentityInterface(fields=['GM_template', 'GM_files']),
         name='output_node')
-    wf.connect(nonlinear_4d_template, 'template_file', output_node, 'GM_template')
+    wf.connect(nonlinear_template, 'template_file', output_node, 'GM_template')
     wf.connect(split_priors, 'out2', output_node, 'GM_files')
 
     return wf
