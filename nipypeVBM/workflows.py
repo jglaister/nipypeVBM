@@ -123,32 +123,67 @@ def create_preproc_workflow(output_root):
     #fsl_reg $OUTPUT / bet /${SUBID}_GM $GPRIORS $OUTPUT / bet /${SUBID}_GM_to_T - a
 
 
-def create_proc_workflow(output_root):
+def create_proc_workflow(output_root, sigma=3):
     wf = pe.Workflow(name='fslvbm_3_proc', base_dir=os.path.join(output_root,'fslvbm_3_proc'))
 
     input_node = pe.Node(
-        interface=util.IdentityInterface(fields=['GM_files', 'GM_template', 'designmat', 'designcon']),
+        interface=util.IdentityInterface(fields=['GM_files', 'GM_template', 'design_mat', 'tcon']),
         name='input_node')
 
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-                                      iterfield=['in_file'],
-                                      name='nonlinear_reg_to_temp')
+                                       iterfield=['in_file'],
+                                       name='nonlinear_reg_to_temp')
     # Use defaults for now
-    #Config file?
+    # nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
+    config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    if os.path.exists(config_file):
+        nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+                                                                'GM_2_MNI152GM_2mm.cnf')
+    nonlinear_reg_to_temp.inputs.jacobian_file = True
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
-    wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'reference')
+    wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
 
     #Multiply JAC and GM
     gm_mul_jac = pe.MapNode(interface=fsl.ImageMaths(),
-                            iterfield=['in_file','in_file2'],
+                            iterfield=['in_file', 'in_file2'],
                             name='gm_mul_jac')
     gm_mul_jac.inputs.op_string = '-mul'
-    wf.connect(nonlinear_reg_to_temp, 'out_file', gm_mul_jac, 'in_file')
+    wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_mul_jac, 'in_file')
     wf.connect(input_node, 'GM_files', gm_mul_jac, 'in_file2')
 
     #Merge GMs
-    #fslmerge - t GM_merg     \`\${FSLDIR} / bin / imglob.. / struc / * _GM_to_template_GM. *\`
-    #fslmerge - t GM_mod_merg \`\${FSLDIR} / bin / imglob.. / struc / * _GM_to_template_GM_mod. *\`
+    gm_merge = pe.Node(interface=fsl.Merge(),
+                                    name='gm_merge')
+    gm_merge.inputs.dimension = 't'
+    wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_merge, 'in_files')
+
+    gm_mod_merge = pe.Node(interface=fsl.Merge(),
+                       name='gm_mod_merge')
+    gm_mod_merge.inputs.dimension = 't'
+    wf.connect(gm_mul_jac, 'out_file', gm_mod_merge, 'in_files')
+
+    gm_mask = pe.Node(interface=fsl.ImageMaths(), name='gm_mask')
+    gm_mask.inputs.op_string = '-Tmean -thr 0.01 -bin'
+    gm_mask.inputs.out_data_type = 'char'
+    wf.connect(gm_merge, 'merged_file', gm_mask, 'in_file')
+
+    gaussian_filter = pe.Node(interface=fsl.ImageMaths(), name='gaussian')
+    gm_mask.inputs.op_string = '-s ' + sigma
+    wf.connect(gm_mod_merge, 'merged_file', gaussian_filter, 'in_file')
+
+    init_randomise = pe.Node(interface=fsl.model.Randomise(), name='randomise')
+    init_randomise.inputs.base_name = 'GM_mod_merg_s' + sigma
+
+    wf.connect(gaussian_filter, 'out_file', init_randomise, 'in_file')
+    wf.connect(gm_mask, 'out_file', init_randomise, 'mask')
+    wf.connect(gaussian_filter, 'design_mat', init_randomise, 'design_mat')
+    wf.connect(gaussian_filter, 'tcon', init_randomise, 'tcon')
+
+    #final_randomise = pe.Node(interface=fsl.model.Randomise(), name='randomise')
+
+
+
+
     #fslmaths GM_merg - Tmean - thr 0.01 - bin GM_mask - odt char
 
     #Multiply by Gaussian for s = 2, 3, 4
