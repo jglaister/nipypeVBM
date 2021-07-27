@@ -85,10 +85,9 @@ def create_preproc_workflow(output_root):
     affine_4d_template.inputs.dimension = 't'
     wf.connect(affine_reg_to_GM, 'out_file', affine_4d_template, 'in_files')
 
-    affine_template = pe.MapNode(interface=GenerateTemplate(),
-                                 iterfield=['in_file'],
-                                 name='affine_template')
-    wf.connect(affine_4d_template, 'merged_file', affine_template, 'in_file')
+    affine_template = pe.Node(interface=GenerateTemplate(),
+                              name='affine_template')
+    wf.connect(affine_4d_template, 'merged_file', affine_template, 'input_file')
 
     '''
     #Nonlinear registration to initial template
