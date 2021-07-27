@@ -89,7 +89,7 @@ def create_preproc_workflow(output_root):
                               name='affine_template')
     wf.connect(affine_4d_template, 'merged_file', affine_template, 'input_file')
 
-    '''
+
     #Nonlinear registration to initial template
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
                                        iterfield=['in_file'],
@@ -98,7 +98,7 @@ def create_preproc_workflow(output_root):
     nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
     wf.connect(split_priors, 'out3', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
-
+    '''
     nonlinear_4d_template = pe.MapNode(interface=fsl.Merge(),
                                     iterfield=['in_file'],
                                     name='nonlinear_4d_template')
