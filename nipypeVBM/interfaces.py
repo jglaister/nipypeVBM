@@ -27,7 +27,7 @@ class GenerateTemplate(base.BaseInterface):
         if self.inputs.flip_axis == -1:
             template_data = np.average(vol_data, axis=-1)
         else:
-            template_data = (np.average(vol_data, axis=-1) + np.average(np.flip(vol_data, axis=1), axis=-1)) / 2
+            template_data = (np.average(vol_data, axis=-1) + np.average(np.flip(vol_data, axis=self.inputs.flip_axis), axis=-1)) / 2
 
         template_obj = nib.Nifti1Image(template_data, vol_obj.affine, vol_obj.header)
         if base.isdefined(self.inputs.output_name):
