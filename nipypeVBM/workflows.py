@@ -14,22 +14,30 @@ def create_nipypevbm_workflow(output_root):
 
     input_node = pe.Node(
         interface=util.IdentityInterface(
-            fields=['struct_files', 'GM_template', 'designmat', 'designcon']),
+            fields=['struct_files', 'GM_template', 'design_mat', 'tcon']),
         name='input_node')
 
     bet_workflow = create_bet_workflow(wf_root)
-    wf.connect(input_node, 'struct_files', bet_workflow.inputs.input_node.struct_files, 'struct_files')
+    wf.connect(input_node, 'struct_files', bet_workflow.inputs.input_node, 'struct_files')
 
     preproc_workflow = create_preproc_workflow(wf_root)
-    wf.connect(bet_workflow.output_node, 'brain_files', bet_workflow.inputs.input_node.struct_files, 'brain_files')
+    wf.connect(bet_workflow.output_node, 'brain_files', preproc_workflow.inputs.input_node, 'brain_files')
+    wf.connect(input_node, 'GM_template', preproc_workflow.inputs.input_node, 'GM_template')
+
+    proc_workflow = create_proc_workflow(wf_root)
+    wf.connect(preproc_workflow.output_node, 'GM_files', preproc_workflow.inputs.input_node, 'GM_files')
+    wf.connect(preproc_workflow.output_node, 'GM_template', preproc_workflow.inputs.input_node, 'GM_template')
+    wf.connect(input_node, 'design_mat', preproc_workflow.inputs.input_node, 'design_mat')
+    wf.connect(input_node, 'tcon', preproc_workflow.inputs.input_node, 'tcon')
+
+    # TODO: Add output node and move files
+
+    return wf
+
 
 def create_bet_workflow(output_root):
     # Set up workflow
     wf = pe.Workflow(name='fslvbm_1_bet',base_dir=os.path.join(output_root, 'fslvbm_1_bet'))
-
-    # Find scans
-    #input_path = os.path.join(scan_directory, '*' + scan_suffix + '*')
-    #input_files = sorted(glob.glob(input_path))
 
     input_node = pe.Node(
         interface=util.IdentityInterface(fields=['struct_files']),
@@ -51,11 +59,12 @@ def create_bet_workflow(output_root):
 
     return wf
 
+
 def create_preproc_workflow(output_root):
     wf = pe.Workflow(name='fslvbm_2_template', base_dir=os.path.join(output_root,'fslvbm_2_template'))
 
     input_node = pe.Node(
-        interface=util.IdentityInterface(fields=['brain_files','GM_template']),
+        interface=util.IdentityInterface(fields=['brain_files', 'GM_template']),
         name='input_node')
 
     fsl_fast = pe.MapNode(interface=fsl.FAST(),
@@ -72,30 +81,28 @@ def create_preproc_workflow(output_root):
     split_priors.inputs.squeeze = True
     wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
 
-    #Affine registration of GM from FAST to GM template
-    affine_reg_to_GM = pe.MapNode(interface=fsl.FLIRT(),
+    # Affine registration of GM from FAST to GM template
+    affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
                                   iterfield=['in_file'],
                                   name='affine_reg_to_GM')
-    #Use defaults for now
-    wf.connect(split_priors, 'out2', affine_reg_to_GM, 'in_file')
-    wf.connect(input_node, 'GM_template', affine_reg_to_GM, 'reference')
+    wf.connect(split_priors, 'out2', affine_reg_to_gm, 'in_file')
+    wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'reference')
 
+    # Average 4D template and its flipped template to create an initial template
     affine_4d_template = pe.Node(interface=fsl.Merge(),
                                  name='affine_4D_template')
     affine_4d_template.inputs.dimension = 't'
-    wf.connect(affine_reg_to_GM, 'out_file', affine_4d_template, 'in_files')
+    wf.connect(affine_reg_to_gm, 'out_file', affine_4d_template, 'in_files')
 
     affine_template = pe.Node(interface=GenerateTemplate(),
                               name='affine_template')
     wf.connect(affine_4d_template, 'merged_file', affine_template, 'input_file')
 
-
-    #Nonlinear registration to initial template
+    # Nonlinear registration to initial template
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
                                        iterfield=['in_file'],
                                        name='nonlinear_reg_to_temp')
-    # Use defaults for now
-    #nonlinear_reg_to_temp.inputs.warped_file = 'test.nii.gz'
+    # Check for config file in FSLDIR, otherwise uses defaults
     config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
     if os.path.exists(config_file):
         nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
@@ -108,7 +115,7 @@ def create_preproc_workflow(output_root):
     nonlinear_4d_template.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'warped_file', nonlinear_4d_template, 'in_files')
 
-    #TODO: Allow for variable size cohorts instead of matched sizes
+    # TODO: Allow for variable size cohorts instead of matched sizes
     nonlinear_template = pe.Node(interface=GenerateTemplate(),
                                  name='nonlinear_template')
     wf.connect(nonlinear_4d_template, 'merged_file', nonlinear_template, 'input_file')
@@ -141,7 +148,7 @@ def create_proc_workflow(output_root, sigma=3):
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
     wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
 
-    #Multiply JAC and GM
+    # Multiply JAC and GM
     gm_mul_jac = pe.MapNode(interface=fsl.ImageMaths(),
                             iterfield=['in_file', 'in_file2'],
                             name='gm_mul_jac')
@@ -149,7 +156,7 @@ def create_proc_workflow(output_root, sigma=3):
     wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_mul_jac, 'in_file')
     wf.connect(input_node, 'GM_files', gm_mul_jac, 'in_file2')
 
-    #Merge GMs
+    # Merge GMs
     gm_merge = pe.Node(interface=fsl.Merge(),
                                     name='gm_merge')
     gm_merge.inputs.dimension = 't'
@@ -177,17 +184,9 @@ def create_proc_workflow(output_root, sigma=3):
     wf.connect(gaussian_filter, 'design_mat', init_randomise, 'design_mat')
     wf.connect(gaussian_filter, 'tcon', init_randomise, 'tcon')
 
+    # TODO: Add output node
+
     return wf
-    #final_randomise = pe.Node(interface=fsl.model.Randomise(), name='randomise')
-
-
-
-
-    #fslmaths GM_merg - Tmean - thr 0.01 - bin GM_mask - odt char
-
-    #Multiply by Gaussian for s = 2, 3, 4
-
-    #Randomise
 
 
 
