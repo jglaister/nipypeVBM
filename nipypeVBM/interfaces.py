@@ -6,7 +6,7 @@ import nipype.utils.filemanip as fip
 
 class GenerateTemplateInputSpec(base.BaseInterfaceInputSpec):
     input_file = base.File(exists=True, desc='input image', mandatory=True)
-    flip_axis = base.traits.Int(desc='Axis number to flip (-1 to not flip)', default_value=0)
+    flip_axis = base.traits.Int(0, desc='Axis number to flip (-1 to not flip)', usedefault=True)
     output_name = base.traits.Str(desc='Filename for output template')
 
 class GenerateTemplateOutputSpec(base.TraitedSpec):
