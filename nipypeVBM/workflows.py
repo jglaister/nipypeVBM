@@ -94,7 +94,7 @@ def create_preproc_workflow(output_root):
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
     wf.connect(split_priors, 'out3', nonlinear_reg_to_temp, 'in_file')
-    wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'reference')
+    wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
 
     nonlinear_4d_template = pe.MapNode(interface=fsl.Merge(),
                                     iterfield=['in_file'],
