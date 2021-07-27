@@ -100,7 +100,8 @@ def create_preproc_workflow(output_root):
                                     iterfield=['in_file'],
                                     name='nonlinear_4d_template')
     nonlinear_4d_template.inputs.dimension = 't'
-    wf.connect(nonlinear_reg_to_temp, 'warped ', nonlinear_4d_template, 'in_files')
+    nonlinear_4d_template.inputs.warped_file = 'test.nii.gz'
+    wf.connect(nonlinear_reg_to_temp, 'warped_file ', nonlinear_4d_template, 'in_files')
 
     nonlinear_template = pe.MapNode(interface=GenerateTemplate(),
                                     name='nonlinear_template')
