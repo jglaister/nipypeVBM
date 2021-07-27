@@ -5,7 +5,7 @@ import nipype.interfaces.fsl as fsl
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
-import interfaces
+from .interfaces import GenerateTemplate
 
 
 def create_nipypevbm_workflow(output_root):
@@ -83,7 +83,7 @@ def create_preproc_workflow(output_root):
     affine_4D_template.inputs.dimension = 't'
     wf.connect(affine_reg_to_GM, 'out_file', affine_4D_template, 'in_files')
 
-    affine_template = pe.MapNode(interface=interfaces.GenerateTemplate(),
+    affine_template = pe.MapNode(interface=GenerateTemplate(),
                               name='affine_template')
     wf.connect(affine_4D_template, 'merged_file', affine_template, 'in_file')
 
@@ -105,7 +105,7 @@ def create_preproc_workflow(output_root):
     nonlinear_4D_template.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'out_file', nonlinear_4D_template, 'in_files')
 
-    nonlinear_template = pe.MapNode(interface=interfaces.GenerateTemplate(),
+    nonlinear_template = pe.MapNode(interface=GenerateTemplate(),
                                  name='nonlinear_template')
     wf.connect(nonlinear_4D_template, 'merged_file', nonlinear_template, 'in_file')
 
