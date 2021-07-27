@@ -68,7 +68,8 @@ def create_preproc_workflow(output_root):
     split_priors = pe.MapNode(interface=util.Split(),
                               iterfield=['inlist'],
                               name='split_priors')
-    split_priors.inputs.splits = [1,1,1]
+    split_priors.inputs.splits = [1, 1, 1]
+    split_priors.inputs.squeeze = True
     wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
 
     #Affine registration of GM from FAST to GM template
@@ -76,7 +77,7 @@ def create_preproc_workflow(output_root):
                                   iterfield=['in_file'],
                                   name='affine_reg_to_GM')
     #Use defaults for now
-    wf.connect(split_priors, 'out1', affine_reg_to_GM, 'in_file')
+    wf.connect(split_priors, 'out2', affine_reg_to_GM, 'in_file')
     wf.connect(input_node, 'GM_template', affine_reg_to_GM, 'reference')
 
     affine_4d_template = pe.Node(interface=fsl.Merge(),
