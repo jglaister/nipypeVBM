@@ -54,7 +54,7 @@ def create_preproc_workflow(output_root):
     wf = pe.Workflow(name='fslvbm_2_template', base_dir=os.path.join(output_root,'fslvbm_2_template'))
 
     input_node = pe.Node(
-        interface=util.IdentityInterface(fields=['struct_files']),
+        interface=util.IdentityInterface(fields=['struct_files','GM_template']),
         name='input_node')
 
     fsl_fast = pe.MapNode(interface=fsl.FAST(),
@@ -74,9 +74,10 @@ def create_preproc_workflow(output_root):
     affine_reg_to_GM = pe.MapNode(interface=fsl.FLIRT(),
                                   iterfield=['in_file'],
                                   name='affine_reg_to_GM')
-    affine_reg_to_GM.inputs.reference = 'ref.nii.gz'
+    #affine_reg_to_GM.inputs.reference = 'ref.nii.gz'
     #Use defaults for now
     wf.connect(split_priors, 'out3', affine_reg_to_GM, 'in_file')
+    wf.connect(input_node, 'GM_template', affine_reg_to_GM, 'reference')
 
     affine_4D_template = pe.Node(interface=fsl.Merge(),
                               name='affine_4D_template')

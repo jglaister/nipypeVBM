@@ -7,6 +7,7 @@ from nipypeVBM.workflows import create_preproc_workflow
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--struct-files', nargs='+', type=str, required=True)
+    parser.add_argument('-g', '--GM-template', type=str, required=True)
     parser.add_argument('-o', '--output-root', type=str, default=os.getcwd())
     parser.add_argument('-t', '--num_threads', type=int, default=1)
     args = parser.parse_args()
@@ -14,10 +15,15 @@ if __name__ == '__main__':
     if args.struct_files is not None:
         args.struct_files = [os.path.abspath(os.path.expanduser(image)) for image in args.struct_files]
 
+    if args.GM_template is not None:
+        args.GM_template = os.path.abspath(os.path.expanduser(args.GM_template))
+
     wf = create_preproc_workflow(args.output_root)
 
     if args.struct_files is not None:
         wf.inputs.input_node.struct_files = args.struct_files
+    if args.GM_template is not None:
+        wf.inputs.input_node.GM_template = args.GM_template
 
     if args.num_threads == 1:
         wf.run()
