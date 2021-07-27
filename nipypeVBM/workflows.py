@@ -131,7 +131,7 @@ def create_proc_workflow(output_root):
 
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
                                       iterfield=['in_file'],
-                                      name='affine_reg_to_GM')
+                                      name='nonlinear_reg_to_temp')
     # Use defaults for now
     #Config file?
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
