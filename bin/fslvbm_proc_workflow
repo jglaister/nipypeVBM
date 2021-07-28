@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--GM-template', type=str, required=True)
     parser.add_argument('--design-mat', type=str, required=True)
     parser.add_argument('--tcon', type=str, required=True)
-    parser.add_argument('-s', '--sigma', type=int)
+    parser.add_argument('-s', '--sigma', type=int, default=3)
     parser.add_argument('-o', '--output-root', type=str, default=os.getcwd())
     parser.add_argument('-t', '--num_threads', type=int, default=1)
     args = parser.parse_args()
