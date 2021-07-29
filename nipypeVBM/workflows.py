@@ -25,10 +25,10 @@ def create_nipypevbm_workflow(output_root, sigma):
     wf.connect(input_node, 'GM_template', preproc_workflow, 'input_node.GM_template')
 
     proc_workflow = create_proc_workflow(wf_root, sigma)
-    wf.connect(preproc_workflow, 'output_node.GM_files', preproc_workflow, 'input_node.GM_files')
-    wf.connect(preproc_workflow, 'output_node.GM_template', preproc_workflow, 'input_node.GM_template')
-    wf.connect(input_node, 'design_mat', preproc_workflow, 'input_node.design_mat')
-    wf.connect(input_node, 'tcon', preproc_workflow, 'input_node.tcon')
+    wf.connect(preproc_workflow, 'output_node.GM_files', proc_workflow, 'input_node.GM_files')
+    wf.connect(preproc_workflow, 'output_node.GM_template', proc_workflow, 'input_node.GM_template')
+    wf.connect(input_node, 'design_mat', proc_workflow, 'input_node.design_mat')
+    wf.connect(input_node, 'tcon', proc_workflow, 'input_node.tcon')
 
     # TODO: Add output node and move files
 
