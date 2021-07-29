@@ -18,17 +18,17 @@ def create_nipypevbm_workflow(output_root, sigma):
         name='input_node')
 
     bet_workflow = create_bet_workflow(wf_root)
-    wf.connect(input_node, 'struct_files', bet_workflow.inputs.input_node, 'struct_files')
+    wf.connect(input_node, 'struct_files', bet_workflow, 'input_node.struct_files')
 
     preproc_workflow = create_preproc_workflow(wf_root)
-    wf.connect(bet_workflow.output_node, 'brain_files', preproc_workflow.inputs.input_node, 'brain_files')
-    wf.connect(input_node, 'GM_template', preproc_workflow.inputs.input_node, 'GM_template')
+    wf.connect(bet_workflow, 'output_node.brain_files', preproc_workflow, 'input_node.brain_files')
+    wf.connect(input_node, 'GM_template', preproc_workflow, 'input_node.GM_template')
 
     proc_workflow = create_proc_workflow(wf_root, sigma)
-    wf.connect(preproc_workflow.output_node, 'GM_files', preproc_workflow.inputs.input_node, 'GM_files')
-    wf.connect(preproc_workflow.output_node, 'GM_template', preproc_workflow.inputs.input_node, 'GM_template')
-    wf.connect(input_node, 'design_mat', preproc_workflow.inputs.input_node, 'design_mat')
-    wf.connect(input_node, 'tcon', preproc_workflow.inputs.input_node, 'tcon')
+    wf.connect(preproc_workflow, 'output_node.GM_files', preproc_workflow, 'input_node.GM_files')
+    wf.connect(preproc_workflow, 'output_node.GM_template', preproc_workflow, 'input_node.GM_template')
+    wf.connect(input_node, 'design_mat', preproc_workflow, 'input_node.design_mat')
+    wf.connect(input_node, 'tcon', preproc_workflow, 'input_node.tcon')
 
     # TODO: Add output node and move files
 
