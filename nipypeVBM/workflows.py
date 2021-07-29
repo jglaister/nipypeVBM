@@ -178,13 +178,20 @@ def create_proc_workflow(output_root, sigma=3):
 
     init_randomise = pe.Node(interface=fsl.model.Randomise(), name='randomise')
     init_randomise.inputs.base_name = 'GM_mod_merg_s' + str(sigma)
-
     wf.connect(gaussian_filter, 'out_file', init_randomise, 'in_file')
     wf.connect(gm_mask, 'out_file', init_randomise, 'mask')
     wf.connect(input_node, 'design_mat', init_randomise, 'design_mat')
     wf.connect(input_node, 'tcon', init_randomise, 'tcon')
 
     # TODO: Add output node
+    final_randomise = pe.Node(interface=fsl.model.Randomise(), name='final_randomise')
+    final_randomise.inputs.base_name = 'GM_mod_merg_s' + str(sigma)
+    final_randomise.inputs.tfce = True
+    final_randomise.inputs.num_perm = 5000
+    wf.connect(gaussian_filter, 'out_file', final_randomise, 'in_file')
+    wf.connect(gm_mask, 'out_file', final_randomise, 'mask')
+    wf.connect(input_node, 'design_mat', final_randomise, 'design_mat')
+    wf.connect(input_node, 'tcon', final_randomise, 'tcon')
 
     return wf
 
