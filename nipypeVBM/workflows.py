@@ -173,11 +173,11 @@ def create_proc_workflow(output_root, sigma=3):
     wf.connect(gm_merge, 'merged_file', gm_mask, 'in_file')
 
     gaussian_filter = pe.Node(interface=fsl.ImageMaths(), name='gaussian')
-    gaussian_filter.inputs.op_string = '-s ' + sigma
+    gaussian_filter.inputs.op_string = '-s ' + str(sigma)
     wf.connect(gm_mod_merge, 'merged_file', gaussian_filter, 'in_file')
 
     init_randomise = pe.Node(interface=fsl.model.Randomise(), name='randomise')
-    init_randomise.inputs.base_name = 'GM_mod_merg_s' + sigma
+    init_randomise.inputs.base_name = 'GM_mod_merg_s' + str(sigma)
 
     wf.connect(gaussian_filter, 'out_file', init_randomise, 'in_file')
     wf.connect(gm_mask, 'out_file', init_randomise, 'mask')
