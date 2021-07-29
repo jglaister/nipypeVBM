@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     wf = create_proc_workflow(args.output_root, args.sigma)
 
-    for a in ['GM_files', 'GM_template', 'design_mat', 'tcon']:
+    for a in ['struct_files', 'GM_template', 'design_mat', 'tcon']:
         if getattr(args, a) is not None:
             setattr(wf.inputs.input_node, a, getattr(args, a))
 
