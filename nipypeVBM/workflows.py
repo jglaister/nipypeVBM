@@ -8,7 +8,7 @@ import nipype.interfaces.utility as util
 from .interfaces import GenerateTemplate
 
 
-def create_nipypevbm_workflow(output_root):
+def create_nipypevbm_workflow(output_root, sigma):
     wf_root = os.path.join(output_root, 'nipypevbm')
     wf = pe.Workflow(name='nipypevbm', base_dir=wf_root)
 
@@ -24,7 +24,7 @@ def create_nipypevbm_workflow(output_root):
     wf.connect(bet_workflow.output_node, 'brain_files', preproc_workflow.inputs.input_node, 'brain_files')
     wf.connect(input_node, 'GM_template', preproc_workflow.inputs.input_node, 'GM_template')
 
-    proc_workflow = create_proc_workflow(wf_root)
+    proc_workflow = create_proc_workflow(wf_root, sigma)
     wf.connect(preproc_workflow.output_node, 'GM_files', preproc_workflow.inputs.input_node, 'GM_files')
     wf.connect(preproc_workflow.output_node, 'GM_template', preproc_workflow.inputs.input_node, 'GM_template')
     wf.connect(input_node, 'design_mat', preproc_workflow.inputs.input_node, 'design_mat')

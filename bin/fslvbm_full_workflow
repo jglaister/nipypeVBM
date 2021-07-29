@@ -1,0 +1,34 @@
+#! /usr/bin/env python
+import argparse
+import os
+
+from nipypeVBM.workflows import create_proc_workflow
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--struct-files', nargs='+', type=str, required=True)
+    parser.add_argument('-g', '--GM-template', type=str, required=True)
+    parser.add_argument('--design-mat', type=str, required=True)
+    parser.add_argument('--tcon', type=str, required=True)
+    parser.add_argument('-s', '--sigma', type=int, default=3)
+    parser.add_argument('-o', '--output-root', type=str, default=os.getcwd())
+    parser.add_argument('-t', '--num_threads', type=int, default=1)
+    args = parser.parse_args()
+
+    if args.struct_files is not None:
+        args.struct_files = [os.path.abspath(os.path.expanduser(image)) for image in args.struct_files]
+
+    for a in ['GM_template', 'design_mat', 'tcon']:
+        if getattr(args, a) is not None:
+            setattr(args, a, os.path.abspath(os.path.expanduser(getattr(args, a))))
+
+    wf = create_proc_workflow(args.output_root, args.sigma)
+
+    for a in ['GM_files', 'GM_template', 'design_mat', 'tcon']:
+        if getattr(args, a) is not None:
+            setattr(wf.inputs.input_node, a, getattr(args, a))
+
+    if args.num_threads == 1:
+        wf.run()
+    else:
+        wf.run(plugin='MultiProc', plugin_args={'n_procs': args.num_threads})
