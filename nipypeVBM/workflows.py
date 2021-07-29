@@ -9,8 +9,8 @@ from .interfaces import GenerateTemplate
 
 
 def create_nipypevbm_workflow(output_root, sigma):
-    wf_root = os.path.join(output_root, 'nipypevbm')
-    wf = pe.Workflow(name='nipypevbm', base_dir=wf_root)
+    wf_root = os.path.join(output_root, 'nipypevbm') # TODO: Remove redundant folder
+    wf = pe.Workflow(name='nipypevbm', base_dir=output_root)
 
     input_node = pe.Node(
         interface=util.IdentityInterface(
@@ -37,7 +37,7 @@ def create_nipypevbm_workflow(output_root, sigma):
 
 def create_bet_workflow(output_root):
     # Set up workflow
-    wf = pe.Workflow(name='fslvbm_1_bet',base_dir=os.path.join(output_root, 'fslvbm_1_bet'))
+    wf = pe.Workflow(name='fslvbm_1_bet', base_dir=output_root)
 
     input_node = pe.Node(
         interface=util.IdentityInterface(fields=['struct_files']),
@@ -61,7 +61,7 @@ def create_bet_workflow(output_root):
 
 
 def create_preproc_workflow(output_root):
-    wf = pe.Workflow(name='fslvbm_2_template', base_dir=os.path.join(output_root,'fslvbm_2_template'))
+    wf = pe.Workflow(name='fslvbm_2_template', base_dir=output_root)
 
     input_node = pe.Node(
         interface=util.IdentityInterface(fields=['brain_files', 'GM_template']),
@@ -130,7 +130,7 @@ def create_preproc_workflow(output_root):
 
 
 def create_proc_workflow(output_root, sigma=3):
-    wf = pe.Workflow(name='fslvbm_3_proc', base_dir=os.path.join(output_root,'fslvbm_3_proc'))
+    wf = pe.Workflow(name='fslvbm_3_proc', base_dir=output_root)
 
     input_node = pe.Node(
         interface=util.IdentityInterface(fields=['GM_files', 'GM_template', 'design_mat', 'tcon']),
