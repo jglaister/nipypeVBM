@@ -2,7 +2,7 @@
 import argparse
 import os
 
-from nipypeVBM.workflows import create_proc_workflow
+from nipypeVBM.workflows import create_nipypevbm_workflow
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -22,7 +22,7 @@ if __name__ == '__main__':
         if getattr(args, a) is not None:
             setattr(args, a, os.path.abspath(os.path.expanduser(getattr(args, a))))
 
-    wf = create_proc_workflow(args.output_root, args.sigma)
+    wf = create_nipypevbm_workflow(args.output_root, args.sigma)
 
     for a in ['struct_files', 'GM_template', 'design_mat', 'tcon']:
         if getattr(args, a) is not None:
