@@ -15,8 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--num_threads', type=int, default=1)
     args = parser.parse_args()
 
-    if args.brain_files is not None:
-        args.brain_files = [os.path.abspath(os.path.expanduser(image)) for image in args.brain_files]
+    if args.GM_files is not None:
+        args.GM_files = [os.path.abspath(os.path.expanduser(image)) for image in args.GM_files]
 
     for a in ['GM_template', 'design_mat', 'tcon']:
         if getattr(args, a) is not None:
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     wf = create_proc_workflow(args.output_root, args.sigma)
 
-    for a in ['brain_files', 'GM_template', 'design_mat', 'tcon']:
+    for a in ['GM_files', 'GM_template', 'design_mat', 'tcon']:
         if getattr(args, a) is not None:
             setattr(wf.inputs.input_node, a, getattr(args, a))
 
