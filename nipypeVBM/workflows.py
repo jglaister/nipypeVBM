@@ -142,9 +142,9 @@ def create_proc_workflow(output_root, sigma=2):
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
     config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    if os.path.exists(config_file):
-        nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-                                                                'GM_2_MNI152GM_2mm.cnf')
+    #if os.path.exists(config_file):
+    #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+    #                                                            'GM_2_MNI152GM_2mm.cnf')
     nonlinear_reg_to_temp.inputs.jacobian_file = True
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
     wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
