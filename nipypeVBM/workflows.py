@@ -130,7 +130,7 @@ def create_preproc_workflow(output_root):
     return wf
 
 
-def create_proc_workflow(output_root, sigma=3):
+def create_proc_workflow(output_root, sigma=2):
     wf = pe.Workflow(name='fslvbm_3_proc', base_dir=output_root)
 
     input_node = pe.Node(
