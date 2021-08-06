@@ -100,7 +100,7 @@ def create_preproc_workflow(output_root):
 
     # Nonlinear registration to initial template
     nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-                                       iterfield=['in_file'],
+                                       iterfield=['in_file', 'affine_file'],
                                        name='nonlinear_reg_to_temp')
     # Check for config file in FSLDIR, otherwise uses defaults
     config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
@@ -109,6 +109,7 @@ def create_preproc_workflow(output_root):
                                                                 'GM_2_MNI152GM_2mm.cnf')
     wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
+    wf.connect(affine_reg_to_gm, 'out_matrix_file', nonlinear_reg_to_temp, 'affine_file')
 
     nonlinear_4d_template = pe.Node(interface=fsl.Merge(),
                                     name='nonlinear_4d_template')
