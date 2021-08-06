@@ -141,7 +141,7 @@ def create_proc_workflow(output_root, sigma=2):
                                        iterfield=['in_file'],
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
-    config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    #config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
     #if os.path.exists(config_file):
     #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
     #                                                            'GM_2_MNI152GM_2mm.cnf')
