@@ -103,10 +103,10 @@ def create_preproc_workflow(output_root):
                                        iterfield=['in_file', 'affine_file'],
                                        name='nonlinear_reg_to_temp')
     # Check for config file in FSLDIR, otherwise uses defaults
-    config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    if os.path.exists(config_file):
-        nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-                                                                'GM_2_MNI152GM_2mm.cnf')
+    #config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    #if os.path.exists(config_file):
+    #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+    #                                                            'GM_2_MNI152GM_2mm.cnf')
     wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
     wf.connect(affine_reg_to_gm, 'out_matrix_file', nonlinear_reg_to_temp, 'affine_file')
@@ -141,10 +141,10 @@ def create_proc_workflow(output_root, sigma=2):
                                        iterfield=['in_file'],
                                        name='nonlinear_reg_to_temp')
     # Use defaults for now
-    #config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    #if os.path.exists(config_file):
-    #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-    #                                                            'GM_2_MNI152GM_2mm.cnf')
+    config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    if os.path.exists(config_file):
+        nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+                                                                'GM_2_MNI152GM_2mm.cnf')
     nonlinear_reg_to_temp.inputs.jacobian_file = True
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
     wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
@@ -188,7 +188,7 @@ def create_proc_workflow(output_root, sigma=2):
     final_randomise = pe.Node(interface=fsl.model.Randomise(), name='final_randomise')
     final_randomise.inputs.base_name = 'GM_mod_merg_s' + str(sigma)
     final_randomise.inputs.tfce = True
-    final_randomise.inputs.num_perm = 5000
+    final_randomise.inputs.num_perm = 1000
     wf.connect(gaussian_filter, 'out_file', final_randomise, 'in_file')
     wf.connect(gm_mask, 'out_file', final_randomise, 'mask')
     wf.connect(input_node, 'design_mat', final_randomise, 'design_mat')
