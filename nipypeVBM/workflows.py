@@ -218,12 +218,19 @@ def create_proc_workflow(output_root, sigma=2):
     #wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
     #wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
 
+    split_transforms = pe.MapNode(interface=util.Split(),
+                              iterfield=['inlist'],
+                              name='split_transforms')
+    split_transforms.inputs.splits = [1, 1]
+    split_transforms.inputs.squeeze = True
+    wf.connect(nonlinear_reg_to_temp, 'forward_transforms', split_transforms, 'inlist')
+
     create_jac = pe.MapNode(interface=ants.utils.CreateJacobianDeterminantImage(),
                             iterfield=['composite_transform'],
                             name='create_jac')
     create_jac.inputs.imageDimension = 3
     create_jac.inputs.outputImage = 'Jacobian.nii.gz'
-    wf.connect(nonlinear_reg_to_temp, 'forward_transforms', create_jac, 'deformationField')
+    wf.connect(split_transforms, 'out2', create_jac, 'deformationField')
 
     # Multiply JAC and GM
     gm_mul_jac = pe.MapNode(interface=fsl.ImageMaths(),
