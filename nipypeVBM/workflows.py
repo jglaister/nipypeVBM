@@ -231,6 +231,8 @@ def create_proc_workflow(output_root, sigma=2):
                             name='create_jac')
     create_jac.inputs.imageDimension = 3
     create_jac.inputs.outputImage = 'Jacobian.nii.gz'
+    create_jac.inputs.doLogJacobian = 0
+    create_jac.inputs.useGeometric = 1
     wf.connect(split_transforms, 'out2', create_jac, 'deformationField')
 
     # Multiply JAC and GM
