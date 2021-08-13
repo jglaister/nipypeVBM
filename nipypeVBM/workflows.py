@@ -218,7 +218,9 @@ def create_proc_workflow(output_root, sigma=2):
     #wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
     #wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
 
-    create_jac = pe.MapNode(interface=ants.utils.CreateJacobianDeterminantImage(), iterfield=['composite_transform'])
+    create_jac = pe.MapNode(interface=ants.utils.CreateJacobianDeterminantImage(),
+                            iterfield=['composite_transform'],
+                            name='create_jac')
     create_jac.inputs.imageDimension = 3
     create_jac.inputs.outputImage = 'Jacobian.nii.gz'
     wf.connect(nonlinear_reg_to_temp, 'composite_transform', create_jac, 'deformationField')
