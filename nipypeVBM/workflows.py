@@ -140,7 +140,7 @@ def create_preproc_workflow(output_root):
     nonlinear_reg_to_temp.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1], [2, 1, 0]]
     nonlinear_reg_to_temp.inputs.sigma_units = ['vox', 'vox', 'vox']
     nonlinear_reg_to_temp.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
-    nonlinear_reg_to_temp.inputs.write_composite_transform = True
+    #nonlinear_reg_to_temp.inputs.write_composite_transform = True
     nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
     nonlinear_reg_to_temp.inputs.output_warped_image = True
     wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'moving_image')
