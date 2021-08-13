@@ -101,6 +101,7 @@ def create_preproc_workflow(output_root):
     affine_reg_to_gm.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1]]
     affine_reg_to_gm.inputs.write_composite_transform = True
     affine_reg_to_gm.inputs.initial_moving_transform_com = 1
+    affine_reg_to_gm.inputs.output_warped_image = True
     wf.connect(split_priors, 'out2', affine_reg_to_gm, 'moving_image')
     wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'fixed_image')
     #affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
@@ -141,6 +142,7 @@ def create_preproc_workflow(output_root):
     nonlinear_reg_to_temp.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
     nonlinear_reg_to_temp.inputs.write_composite_transform = True
     nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
+    nonlinear_reg_to_temp.inputs.output_warped_image = True
     wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'fixed_image')
     #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
@@ -182,31 +184,61 @@ def create_proc_workflow(output_root, sigma=2):
         interface=util.IdentityInterface(fields=['GM_files', 'GM_template', 'design_mat', 'tcon']),
         name='input_node')
 
-    nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-                                       iterfield=['in_file'],
+    nonlinear_reg_to_temp = pe.MapNode(interface=ants.Registration(),
+                                       iterfield=['moving_image'],
                                        name='nonlinear_reg_to_temp')
-    # Use defaults for now
-    config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    if os.path.exists(config_file):
-        nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-                                                                'GM_2_MNI152GM_2mm.cnf')
-    nonlinear_reg_to_temp.inputs.jacobian_file = True
-    wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
-    wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
+    nonlinear_reg_to_temp.inputs.dimension = 3
+    nonlinear_reg_to_temp.inputs.interpolation = 'Linear'
+    nonlinear_reg_to_temp.inputs.metric = ['MI', 'MI', 'MI']
+    nonlinear_reg_to_temp.inputs.metric_weight = [1.0, 1.0, 1.0]
+    nonlinear_reg_to_temp.inputs.radius_or_number_of_bins = [32, 32, 32]
+    nonlinear_reg_to_temp.inputs.sampling_strategy = ['Regular', 'Regular', 'Regular']
+    nonlinear_reg_to_temp.inputs.sampling_percentage = [0.25, 0.25, 0.25]
+    nonlinear_reg_to_temp.inputs.transforms = ['Rigid', 'Affine', 'SyN']
+    nonlinear_reg_to_temp.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3, 0)]
+    nonlinear_reg_to_temp.inputs.number_of_iterations = [[100, 50, 25], [100, 50, 25], [100, 10, 5]]
+    nonlinear_reg_to_temp.inputs.convergence_threshold = [1e-6, 1e-6, 1e-4]
+    nonlinear_reg_to_temp.inputs.convergence_window_size = [10, 10, 10]
+    nonlinear_reg_to_temp.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1], [2, 1, 0]]
+    nonlinear_reg_to_temp.inputs.sigma_units = ['vox', 'vox', 'vox']
+    nonlinear_reg_to_temp.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
+    nonlinear_reg_to_temp.inputs.write_composite_transform = True
+    nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
+    wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'moving_image')
+    wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'fixed_image')
+    #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
+    #                                   iterfield=['in_file'],
+    #                                   name='nonlinear_reg_to_temp')
+    ## Use defaults for now
+    #config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    #if os.path.exists(config_file):
+    #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+    #                                                            'GM_2_MNI152GM_2mm.cnf')
+    #nonlinear_reg_to_temp.inputs.jacobian_file = True
+    #wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
+    #wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
+
+    create_jac = pe.MapNode(interface=ants.utils.CreateJacobianDeterminantImage(), iterfield=['composite_transform'])
+    create_jac.inputs.imageDimension = 3
+    create_jac.inputs.outputImage = 'Jacobian.nii.gz'
+    wf.connect(nonlinear_reg_to_temp, 'composite_transform', create_jac, 'deformationField')
 
     # Multiply JAC and GM
     gm_mul_jac = pe.MapNode(interface=fsl.ImageMaths(),
                             iterfield=['in_file', 'in_file2'],
                             name='gm_mul_jac')
     gm_mul_jac.inputs.op_string = '-mul'
-    wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_mul_jac, 'in_file')
-    wf.connect(nonlinear_reg_to_temp, 'jacobian_file', gm_mul_jac, 'in_file2')
+    wf.connect(nonlinear_reg_to_temp, 'warped_image', gm_mul_jac, 'in_file')
+    #wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_mul_jac, 'in_file')
+    wf.connect(create_jac, 'jacobian_image', gm_mul_jac, 'in_file2')
+    #wf.connect(nonlinear_reg_to_temp, 'jacobian_file', gm_mul_jac, 'in_file2')
 
     # Merge GMs
     gm_merge = pe.Node(interface=fsl.Merge(),
                                     name='gm_merge')
     gm_merge.inputs.dimension = 't'
-    wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_merge, 'in_files')
+    wf.connect(nonlinear_reg_to_temp, 'warped_image', gm_merge, 'in_files')
+    #wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_merge, 'in_files')
 
     gm_mod_merge = pe.Node(interface=fsl.Merge(),
                        name='gm_mod_merge')
