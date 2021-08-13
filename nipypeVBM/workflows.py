@@ -2,6 +2,7 @@ import os, glob  # system functions
 
 import nipype.interfaces.io as nio
 import nipype.interfaces.fsl as fsl
+import nipype.interfaces.ants as ants
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
@@ -82,39 +83,83 @@ def create_preproc_workflow(output_root):
     wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
 
     # Affine registration of GM from FAST to GM template
-    affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
-                                  iterfield=['in_file'],
-                                  name='affine_reg_to_GM')
-    wf.connect(split_priors, 'out2', affine_reg_to_gm, 'in_file')
-    wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'reference')
+    affine_reg_to_gm = pe.MapNode(ants.Registration(), iterfield=['moving_image'], name='affine_reg_to_GM')
+    affine_reg_to_gm.inputs.dimension = 3
+    affine_reg_to_gm.inputs.interpolation = 'Linear'
+    affine_reg_to_gm.inputs.metric = ['MI', 'MI']
+    affine_reg_to_gm.inputs.metric_weight = [1.0, 1.0]
+    affine_reg_to_gm.inputs.radius_or_number_of_bins = [32, 32]
+    affine_reg_to_gm.inputs.sampling_strategy = ['Regular', 'Regular']
+    affine_reg_to_gm.inputs.sampling_percentage = [0.25, 0.25]
+    affine_reg_to_gm.inputs.transforms = ['Rigid', 'Affine']
+    affine_reg_to_gm.inputs.transform_parameters = [(0.1,), (0.1,)]
+    affine_reg_to_gm.inputs.number_of_iterations = [[100, 50, 25], [100, 50, 25]]
+    affine_reg_to_gm.inputs.convergence_threshold = [1e-6, 1e-6]
+    affine_reg_to_gm.inputs.convergence_window_size = [10, 10]
+    affine_reg_to_gm.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1]]
+    affine_reg_to_gm.inputs.sigma_units = ['vox', 'vox']
+    affine_reg_to_gm.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1]]
+    affine_reg_to_gm.inputs.write_composite_transform = True
+    affine_reg_to_gm.inputs.initial_moving_transform_com = 1
+    wf.connect(split_priors, 'out2', affine_reg_to_gm, 'moving_image')
+    wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'fixed_image')
+    #affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
+    #                              iterfield=['in_file'],
+    #                              name='affine_reg_to_GM')
+    #wf.connect(split_priors, 'out2', affine_reg_to_gm, 'in_file')
+    #wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'reference')
 
     # Average 4D template and its flipped template to create an initial template
     affine_4d_template = pe.Node(interface=fsl.Merge(),
                                  name='affine_4D_template')
     affine_4d_template.inputs.dimension = 't'
-    wf.connect(affine_reg_to_gm, 'out_file', affine_4d_template, 'in_files')
+    wf.connect(affine_reg_to_gm, 'warped_image', affine_4d_template, 'in_files')
+    #wf.connect(affine_reg_to_gm, 'out_file', affine_4d_template, 'in_files')
 
     affine_template = pe.Node(interface=GenerateTemplate(),
                               name='affine_template')
     wf.connect(affine_4d_template, 'merged_file', affine_template, 'input_file')
 
     # Nonlinear registration to initial template
-    nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-                                       iterfield=['in_file', 'affine_file'],
+    nonlinear_reg_to_temp = pe.MapNode(interface=ants.Registration(),
+                                       iterfield=['moving_image'],
                                        name='nonlinear_reg_to_temp')
-    # Check for config file in FSLDIR, otherwise uses defaults
-    #config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    #if os.path.exists(config_file):
-    #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-    #                                                            'GM_2_MNI152GM_2mm.cnf')
-    wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
-    wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
-    wf.connect(affine_reg_to_gm, 'out_matrix_file', nonlinear_reg_to_temp, 'affine_file')
+    nonlinear_reg_to_temp.inputs.dimension = 3
+    nonlinear_reg_to_temp.inputs.interpolation = 'Linear'
+    nonlinear_reg_to_temp.inputs.metric = ['MI', 'MI', 'MI']
+    nonlinear_reg_to_temp.inputs.metric_weight = [1.0, 1.0, 1.0]
+    nonlinear_reg_to_temp.inputs.radius_or_number_of_bins = [32, 32, 32]
+    nonlinear_reg_to_temp.inputs.sampling_strategy = ['Regular', 'Regular', 'Regular']
+    nonlinear_reg_to_temp.inputs.sampling_percentage = [0.25, 0.25, 0.25]
+    nonlinear_reg_to_temp.inputs.transforms = ['Rigid', 'Affine', 'SyN']
+    nonlinear_reg_to_temp.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3, 0)]
+    nonlinear_reg_to_temp.inputs.number_of_iterations = [[100, 50, 25], [100, 50, 25], [100, 10, 5]]
+    nonlinear_reg_to_temp.inputs.convergence_threshold = [1e-6, 1e-6, 1e-4]
+    nonlinear_reg_to_temp.inputs.convergence_window_size = [10, 10, 10]
+    nonlinear_reg_to_temp.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1], [2, 1, 0]]
+    nonlinear_reg_to_temp.inputs.sigma_units = ['vox', 'vox', 'vox']
+    nonlinear_reg_to_temp.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
+    nonlinear_reg_to_temp.inputs.write_composite_transform = True
+    nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
+    wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'moving_image')
+    wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'fixed_image')
+    #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
+    #                                   iterfield=['in_file', 'affine_file'],
+    #                                   name='nonlinear_reg_to_temp')
+    ## Check for config file in FSLDIR, otherwise uses defaults
+    ##config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
+    ##if os.path.exists(config_file):
+    ##    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
+    ##                                                            'GM_2_MNI152GM_2mm.cnf')
+    #wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
+    #wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
+    #wf.connect(affine_reg_to_gm, 'out_matrix_file', nonlinear_reg_to_temp, 'affine_file')
 
     nonlinear_4d_template = pe.Node(interface=fsl.Merge(),
                                     name='nonlinear_4d_template')
     nonlinear_4d_template.inputs.dimension = 't'
-    wf.connect(nonlinear_reg_to_temp, 'warped_file', nonlinear_4d_template, 'in_files')
+    wf.connect(nonlinear_reg_to_temp, 'warped_image', nonlinear_4d_template, 'in_files')
+    #wf.connect(nonlinear_reg_to_temp, 'warped_file', nonlinear_4d_template, 'in_files')
 
     # TODO: Allow for variable size cohorts instead of matched sizes
     nonlinear_template = pe.Node(interface=GenerateTemplate(),
