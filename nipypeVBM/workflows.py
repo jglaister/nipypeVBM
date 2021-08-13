@@ -204,6 +204,7 @@ def create_proc_workflow(output_root, sigma=2):
     nonlinear_reg_to_temp.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
     nonlinear_reg_to_temp.inputs.write_composite_transform = False
     nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
+    nonlinear_reg_to_temp.inputs.output_warped_image = True
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'fixed_image')
     #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
