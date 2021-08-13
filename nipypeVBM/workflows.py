@@ -223,7 +223,7 @@ def create_proc_workflow(output_root, sigma=2):
                             name='create_jac')
     create_jac.inputs.imageDimension = 3
     create_jac.inputs.outputImage = 'Jacobian.nii.gz'
-    wf.connect(nonlinear_reg_to_temp, 'composite_transform', create_jac, 'deformationField')
+    wf.connect(nonlinear_reg_to_temp, 'forward_transforms', create_jac, 'deformationField')
 
     # Multiply JAC and GM
     gm_mul_jac = pe.MapNode(interface=fsl.ImageMaths(),
