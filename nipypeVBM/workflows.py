@@ -122,6 +122,8 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
         #Connect warped prior
         wf.connect(input_node, 'brain_files', ants_atropos, 'prior_image')
+    else:
+        print('GM segmentation must be fslfast or atropos')
 
 
     # Affine registration of GM from FAST to GM template
