@@ -61,61 +61,67 @@ def create_bet_workflow(output_root):
     return wf
 
 
-def create_preproc_workflow(output_root):
+def create_preproc_workflow(output_root, gm_alg='atropos'):
     wf = pe.Workflow(name='fslvbm_2_template', base_dir=output_root)
 
     input_node = pe.Node(
         interface=util.IdentityInterface(fields=['brain_files', 'GM_template']),
         name='input_node')
 
-    fsl_fast = pe.MapNode(interface=fsl.FAST(),
-                          iterfield=['in_files'],
-                          name='fsl_fast')
-    fsl_fast.inputs.mixel_smooth = 0.3
-    fsl_fast.inputs.hyper = 0.1
-    wf.connect(input_node, 'brain_files', fsl_fast, 'in_files')
+    if gm_alg is 'fslfast':
+        fsl_fast = pe.MapNode(interface=fsl.FAST(),
+                              iterfield=['in_files'],
+                              name='fsl_fast')
+        fsl_fast.inputs.mixel_smooth = 0.3
+        fsl_fast.inputs.hyper = 0.1
+        wf.connect(input_node, 'brain_files', fsl_fast, 'in_files')
 
-    split_priors = pe.MapNode(interface=util.Split(),
-                              iterfield=['inlist'],
-                              name='split_priors')
-    split_priors.inputs.splits = [1, 1, 1]
-    split_priors.inputs.squeeze = True
-    wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
+        split_priors = pe.MapNode(interface=util.Split(),
+                                  iterfield=['inlist'],
+                                  name='split_priors')
+        split_priors.inputs.splits = [1, 1, 1]
+        split_priors.inputs.squeeze = True
+        wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
+        
+    elif gm_alg is 'atropos':
+        #Register template to brain
+        deformable_priors = pe.MapNode(ants.Registration(), iterfield=['fixed_image'], name='deformable_priors')
+        deformable_priors.inputs.dimension = 3
+        deformable_priors.inputs.interpolation = 'Linear'
+        deformable_priors.inputs.metric = ['MI', 'MI', 'MI']
+        deformable_priors.inputs.metric_weight = [1.0, 1.0, 1.0]
+        deformable_priors.inputs.radius_or_number_of_bins = [32, 32, 32]
+        deformable_priors.inputs.sampling_strategy = ['Regular', 'Regular', 'Regular']
+        deformable_priors.inputs.sampling_percentage = [0.25, 0.25, 0.25]
+        deformable_priors.inputs.transforms = ['Rigid', 'Affine', 'SyN']
+        deformable_priors.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3, 0)]
+        deformable_priors.inputs.number_of_iterations = [[100, 50, 25], [100, 50, 25], [100, 10, 5]]
+        deformable_priors.inputs.convergence_threshold = [1e-6, 1e-6, 1e-4]
+        deformable_priors.inputs.convergence_window_size = [10, 10, 10]
+        deformable_priors.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1], [2, 1, 0]]
+        deformable_priors.inputs.sigma_units = ['vox', 'vox', 'vox']
+        deformable_priors.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
+        deformable_priors.inputs.write_composite_transform = True
+        deformable_priors.inputs.initial_moving_transform_com = 1
+        deformable_priors.inputs.output_warped_image = True
+        #Template file
+        deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
+        wf.connect(input_node, 'brain_files', deformable_priors, 'moving_image')
 
-    #Register template to brain
-    deformable_priors = pe.MapNode(ants.Registration(), iterfield=['fixed_image'], name='deformable_priors')
-    deformable_priors.inputs.dimension = 3
-    deformable_priors.inputs.interpolation = 'Linear'
-    deformable_priors.inputs.metric = ['MI', 'MI', 'MI']
-    deformable_priors.inputs.metric_weight = [1.0, 1.0, 1.0]
-    deformable_priors.inputs.radius_or_number_of_bins = [32, 32, 32]
-    deformable_priors.inputs.sampling_strategy = ['Regular', 'Regular', 'Regular']
-    deformable_priors.inputs.sampling_percentage = [0.25, 0.25, 0.25]
-    deformable_priors.inputs.transforms = ['Rigid', 'Affine', 'SyN']
-    deformable_priors.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3, 0)]
-    deformable_priors.inputs.number_of_iterations = [[100, 50, 25], [100, 50, 25], [100, 10, 5]]
-    deformable_priors.inputs.convergence_threshold = [1e-6, 1e-6, 1e-4]
-    deformable_priors.inputs.convergence_window_size = [10, 10, 10]
-    deformable_priors.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1], [2, 1, 0]]
-    deformable_priors.inputs.sigma_units = ['vox', 'vox', 'vox']
-    deformable_priors.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
-    deformable_priors.inputs.write_composite_transform = True
-    deformable_priors.inputs.initial_moving_transform_com = 1
-    deformable_priors.inputs.output_warped_image = True
-    #Template file
-    wf.connect(split_priors, 'out2', deformable_priors, 'moving_image')
-    wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
+        #Warp priors
+        warp_priors = pe.MapNode(ants.ApplyTransforms(), iterfield=['reference_image', 'transforms'], name='warp_priors')
+        warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_glm_6labelsJointFusion_rai.nii.gz'
+        wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
+        wf.connect(deformable_priors, 'composite_transform', warp_priors, 'transforms')
 
-    #Warp priors
-
-    ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'prior_image'], name='ants_atropos')
-    ants_atropos.inputs.dimension = 3
-    ants_atropos.inputs.initialization = 'PriorLabelImage'
-    ants_atropos.inputs.number_of_tissue_classes = 6
-    ants_atropos.inputs.save_posteriors = True
-    wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
-    #Connect warped prior
-    wf.connect(input_node, 'brain_files', ants_atropos, 'prior_image')
+        ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'prior_image'], name='ants_atropos')
+        ants_atropos.inputs.dimension = 3
+        ants_atropos.inputs.initialization = 'PriorLabelImage'
+        ants_atropos.inputs.number_of_tissue_classes = 6
+        ants_atropos.inputs.save_posteriors = True
+        wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
+        #Connect warped prior
+        wf.connect(input_node, 'brain_files', ants_atropos, 'prior_image')
 
 
     # Affine registration of GM from FAST to GM template
