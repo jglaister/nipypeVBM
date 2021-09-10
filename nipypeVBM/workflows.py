@@ -82,6 +82,42 @@ def create_preproc_workflow(output_root):
     split_priors.inputs.squeeze = True
     wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
 
+    #Register template to brain
+    deformable_priors = pe.MapNode(ants.Registration(), iterfield=['fixed_image'], name='deformable_priors')
+    deformable_priors.inputs.dimension = 3
+    deformable_priors.inputs.interpolation = 'Linear'
+    deformable_priors.inputs.metric = ['MI', 'MI', 'MI']
+    deformable_priors.inputs.metric_weight = [1.0, 1.0, 1.0]
+    deformable_priors.inputs.radius_or_number_of_bins = [32, 32, 32]
+    deformable_priors.inputs.sampling_strategy = ['Regular', 'Regular', 'Regular']
+    deformable_priors.inputs.sampling_percentage = [0.25, 0.25, 0.25]
+    deformable_priors.inputs.transforms = ['Rigid', 'Affine', 'SyN']
+    deformable_priors.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3, 0)]
+    deformable_priors.inputs.number_of_iterations = [[100, 50, 25], [100, 50, 25], [100, 10, 5]]
+    deformable_priors.inputs.convergence_threshold = [1e-6, 1e-6, 1e-4]
+    deformable_priors.inputs.convergence_window_size = [10, 10, 10]
+    deformable_priors.inputs.smoothing_sigmas = [[4, 2, 1], [4, 2, 1], [2, 1, 0]]
+    deformable_priors.inputs.sigma_units = ['vox', 'vox', 'vox']
+    deformable_priors.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
+    deformable_priors.inputs.write_composite_transform = True
+    deformable_priors.inputs.initial_moving_transform_com = 1
+    deformable_priors.inputs.output_warped_image = True
+    #Template file
+    wf.connect(split_priors, 'out2', deformable_priors, 'moving_image')
+    wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
+
+    #Warp priors
+
+    ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'prior_image'], name='ants_atropos')
+    ants_atropos.inputs.dimension = 3
+    ants_atropos.inputs.initialization = 'PriorLabelImage'
+    ants_atropos.inputs.number_of_tissue_classes = 6
+    ants_atropos.inputs.save_posteriors = True
+    wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
+    #Connect warped prior
+    wf.connect(input_node, 'brain_files', ants_atropos, 'prior_image')
+
+
     # Affine registration of GM from FAST to GM template
     affine_reg_to_gm = pe.MapNode(ants.Registration(), iterfield=['moving_image'], name='affine_reg_to_GM')
     affine_reg_to_gm.inputs.dimension = 3
