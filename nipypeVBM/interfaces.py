@@ -1,4 +1,5 @@
 import os.path
+import glob
 
 import nipype.interfaces.base as base
 import nipype.utils.filemanip as fip
@@ -46,5 +47,47 @@ class GenerateTemplate(base.BaseInterface):
             outputs['template_file'] = os.path.abspath('template.nii.gz')
         return outputs
 
+
+class GeneratePriorsInputSpec(base.BaseInterfaceInputSpec):
+    reference_file = base.File(exists=True, desc='input image', mandatory=True)
+    prior_4D_file = base.File(exists=True, desc='input image', mandatory=True)
+
+
+class GeneratePriorsOutputSpec(base.TraitedSpec):
+    prior_3D_files = base.File(exists=True, desc='output template')
+    prior_string = base.traits.String()
+
+
+class GeneratePriors(base.BaseInterface):
+    input_spec = GeneratePriorsInputSpec
+    output_spec = GeneratePriorsOutputSpec
+
+    def _run_interface(self, runtime):
+        import nibabel as nib
+        import numpy as np
+
+        vol_obj = nib.load(self.inputs.prior_4D_file)
+        vol_data = vol_obj.get_fdata()
+        ref_obj = nib.load(self.inputs.reference_file)
+
+        bg_priors = 1 - np.sum(vol_data, 3)
+        output_filename = fip.split_filename(self.inputs.reference_file)[1] + '_prior01.nii.gz'
+        prior_obj = nib.Nifti1Image(bg_priors, ref_obj.affine, ref_obj.header)
+        prior_obj.to_filename(output_filename)
+
+        for i in range(vol_data.shape[3]):
+            output_filename = fip.split_filename(self.inputs.reference_file)[1] + '_prior0' + str(i + 2) + '.nii.gz'
+            img = vol_data[:, :, :, i]
+            prior_obj = nib.Nifti1Image(img, ref_obj.affine, ref_obj.header)
+            prior_obj.to_filename(output_filename)
+
+        return runtime
+
+    def _list_outputs(self):
+        outputs = self._outputs().get()
+        basename = fip.split_filename(self.inputs.reference_file)[1]
+        outputs['prior_3D_files'] = sorted(glob(os.path.abspath(basename + '_prior*.nii.gz')))
+        outputs['prior_string'] = os.path.abspath(basename + '_prior%02d.nii.gz')
+        return outputs
 
 
