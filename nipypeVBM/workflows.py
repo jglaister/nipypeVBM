@@ -1,4 +1,5 @@
-import os, glob  # system functions
+import os
+import glob  # system functions
 
 import nipype.interfaces.io as nio
 import nipype.interfaces.fsl as fsl
@@ -6,7 +7,7 @@ import nipype.interfaces.ants as ants
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
-from .interfaces import GenerateTemplate
+from interfaces import GenerateTemplate
 
 
 def create_nipypevbm_workflow(output_root, sigma):
@@ -84,7 +85,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
         
     elif gm_alg is 'atropos':
-        #Register template to brain
+        # Register template to brain
         deformable_priors = pe.MapNode(ants.Registration(), iterfield=['fixed_image'], name='deformable_priors')
         deformable_priors.inputs.dimension = 3
         deformable_priors.inputs.interpolation = 'Linear'
@@ -104,11 +105,11 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         deformable_priors.inputs.write_composite_transform = True
         deformable_priors.inputs.initial_moving_transform_com = 1
         deformable_priors.inputs.output_warped_image = True
-        #Template file
+        # Template file
         deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
         wf.connect(input_node, 'brain_files', deformable_priors, 'moving_image')
 
-        #Warp priors
+        # Warp priors
         warp_priors = pe.MapNode(ants.ApplyTransforms(), iterfield=['reference_image', 'transforms'], name='warp_priors')
         warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_glm_6labelsJointFusion_rai.nii.gz'
         wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
