@@ -7,7 +7,7 @@ import nipype.interfaces.ants as ants
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
-from interfaces import GenerateTemplate, GeneratePriors
+from nipypeVBM.interfaces import GenerateTemplate, GeneratePriors
 
 
 def create_nipypevbm_workflow(output_root, sigma):
