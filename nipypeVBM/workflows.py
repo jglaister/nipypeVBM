@@ -136,6 +136,8 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     split_priors.inputs.squeeze = True
     wf.connect(ants_atropos, 'posteriors', split_priors, 'inlist')
 
+    # TODO: Add GM and cerebellum priors together
+
     #else:
     #    print('GM segmentation must be fslfast or atropos')
 
