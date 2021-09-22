@@ -134,7 +134,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
                              name='split_priors')
     split_priors.inputs.splits = [2, 2, 2]
     split_priors.inputs.squeeze = True
-    wf.connect(generate_priors, 'posteriors', split_priors, 'inlist')
+    wf.connect(ants_atropos, 'posteriors', split_priors, 'inlist')
 
     #else:
     #    print('GM segmentation must be fslfast or atropos')
