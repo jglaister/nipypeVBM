@@ -54,7 +54,7 @@ class GeneratePriorsInputSpec(base.BaseInterfaceInputSpec):
 
 
 class GeneratePriorsOutputSpec(base.TraitedSpec):
-    prior_3D_files = base.File(exists=True, desc='output template')
+    prior_3D_files = base.traits.List(base.File(exists=True, desc='output template'))
     prior_string = base.traits.String()
 
 
