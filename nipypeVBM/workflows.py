@@ -108,7 +108,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     deformable_priors.inputs.output_warped_image = True
     # Template file
     deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
-    wf.connect(input_node, 'brain_files', deformable_priors, 'moving_image')
+    wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
 
     # Warp priors
     warp_priors = pe.MapNode(ants.ApplyTransforms(), iterfield=['reference_image', 'transforms'], name='warp_priors')
