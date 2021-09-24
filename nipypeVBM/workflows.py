@@ -125,6 +125,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'mask_image', 'prior_image'], name='ants_atropos')
     ants_atropos.inputs.dimension = 3
     ants_atropos.inputs.initialization = 'PriorProbabilityImages'
+    ants_atropos.inputs.prior_weighting = 1.0
     ants_atropos.inputs.number_of_tissue_classes = 7
     ants_atropos.inputs.save_posteriors = True
     wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
