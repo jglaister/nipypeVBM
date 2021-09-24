@@ -86,7 +86,7 @@ class GeneratePriors(base.BaseInterface):
     def _list_outputs(self):
         outputs = self._outputs().get()
         basename = fip.split_filename(self.inputs.reference_file)[1]
-        outputs['prior_3D_files'] = sorted(glob(os.path.abspath(basename + '_prior*.nii.gz')))
+        outputs['prior_3D_files'] = glob.glob(os.path.abspath(basename + '_prior*.nii.gz'))
         outputs['prior_string'] = os.path.abspath(basename + '_prior%02d.nii.gz')
         return outputs
 
