@@ -24,6 +24,7 @@ def create_nipypevbm_workflow(output_root, sigma):
 
     preproc_workflow = create_preproc_workflow(wf_root)
     wf.connect(bet_workflow, 'output_node.brain_files', preproc_workflow, 'input_node.brain_files')
+    wf.connect(bet_workflow, 'output_node.mask_files', preproc_workflow, 'input_node.mask_files')
     wf.connect(input_node, 'GM_template', preproc_workflow, 'input_node.GM_template')
 
     proc_workflow = create_proc_workflow(wf_root, sigma)
@@ -67,7 +68,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     wf_root = os.path.join(output_root, 'fslvbm_2_template')
 
     input_node = pe.Node(
-        interface=util.IdentityInterface(fields=['brain_files', 'GM_template']),
+        interface=util.IdentityInterface(fields=['brain_files', 'mask_files', 'GM_template']),
         name='input_node')
 
     # if gm_alg is 'fslfast':
@@ -128,6 +129,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     ants_atropos.inputs.save_posteriors = True
     wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
     wf.connect(generate_priors, 'prior_string', ants_atropos, 'prior_image')
+    wf.connect(input_node, 'mask_image', ants_atropos, 'mask_image')
 
     split_priors = pe.MapNode(interface=util.Split(),
                              iterfield=['inlist'],
