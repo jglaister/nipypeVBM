@@ -129,7 +129,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     ants_atropos.inputs.save_posteriors = True
     wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
     wf.connect(generate_priors, 'prior_string', ants_atropos, 'prior_image')
-    wf.connect(input_node, 'mask_image', ants_atropos, 'mask_image')
+    wf.connect(input_node, 'mask_image', ants_atropos, 'mask_files')
 
     split_priors = pe.MapNode(interface=util.Split(),
                              iterfield=['inlist'],
