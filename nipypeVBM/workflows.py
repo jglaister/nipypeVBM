@@ -106,8 +106,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     deformable_priors.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [4, 2, 1]]
     deformable_priors.inputs.write_composite_transform = True
     deformable_priors.inputs.initial_moving_transform_com = 1
-    deformable_priors.inputs.output_warped_image = True
-    deformable_priors.inputs.verbose = True
+    #deformable_priors.inputs.output_warped_image = True
     # Template file
     deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
     wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
