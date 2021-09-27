@@ -118,9 +118,9 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
     wf.connect(deformable_priors, 'composite_transform', warp_priors, 'transforms')
 
-    generate_priors = pe.MapNode(GeneratePriors(needed_outputs=['prior_3D_files','prior_string']),
+    generate_priors = pe.MapNode(GeneratePriors(),
                                  iterfield=['reference_file', 'prior_4D_file'],
-                                 name='generate_priors')
+                                 name='generate_priors', needed_outputs=['prior_3D_files','prior_string'])
     wf.connect(input_node, 'brain_files', generate_priors, 'reference_file')
     wf.connect(warp_priors, 'output_image', generate_priors, 'prior_4D_file')
 
