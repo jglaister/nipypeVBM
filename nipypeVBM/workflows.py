@@ -142,14 +142,14 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     split_posteriors = pe.MapNode(interface=util.Split(),
                              iterfield=['inlist'],
                              name='split_posteriors')
-    split_posteriors.inputs.splits = [1, 5, 1]
+    split_posteriors.inputs.splits = [2, 1, 3, 1]
     split_posteriors.inputs.squeeze = True
     wf.connect(ants_atropos, 'posteriors', split_posteriors, 'inlist')
 
-    add_posteriors = pe.MapNode(interface=ants.utils.ImageMath(), iterfield=['op1', 'op2'])
+    add_posteriors = pe.MapNode(interface=ants.utils.ImageMath(), iterfield=['op1', 'op2'], name='add_posteriors')
     add_posteriors.inputs.operation = '+'
-    wf.connect(split_posteriors, 'out1', add_posteriors, 'op1')
-    wf.connect(split_posteriors, 'out3', add_posteriors, 'op2')
+    wf.connect(split_posteriors, 'out2', add_posteriors, 'op1')
+    wf.connect(split_posteriors, 'out4', add_posteriors, 'op2')
     # TODO: Add GM and cerebellum priors together
 
     #else:
