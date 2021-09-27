@@ -113,7 +113,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
 
     # Warp priors
     warp_priors = pe.MapNode(ants.ApplyTransforms(), iterfield=['reference_image', 'transforms'], name='warp_priors')
-    warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_glm_6labelsJointFusion_rai.nii.gz'
+    warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/Priors2/priors_comb_rai.nii.gz'
     warp_priors.inputs.input_image_type = 3
     wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
     wf.connect(deformable_priors, 'composite_transform', warp_priors, 'transforms')
