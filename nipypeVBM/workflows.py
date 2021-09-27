@@ -127,12 +127,9 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     merge_priors = pe.MapNode(fsl.Merge(), iterfield=['in_files'], name='merge_priors')
     merge_priors.inputs.dimension = 't'
     wf.connect(generate_priors, 'prior_3D_files', merge_priors, 'in_files')
-    #save_priors = pe.MapNode(interface=util.IdentityInterface(fields=['prior_images']), iterfield=['prior_images'],
-    #                         name='save_priors')
-    #wf.connect(generate_priors, 'prior_3D_files', save_priors, 'prior_images')
 
-
-    ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'mask_image', 'prior_image'], name='ants_atropos')
+    ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'mask_image', 'prior_image'],
+                              name='ants_atropos')
     ants_atropos.inputs.dimension = 3
     ants_atropos.inputs.initialization = 'PriorProbabilityImages'
     ants_atropos.inputs.prior_weighting = 1.0
@@ -142,13 +139,17 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     wf.connect(generate_priors, 'prior_string', ants_atropos, 'prior_image')
     wf.connect(input_node, 'mask_files', ants_atropos, 'mask_image')
 
-    split_priors = pe.MapNode(interface=util.Split(),
+    split_posteriors = pe.MapNode(interface=util.Split(),
                              iterfield=['inlist'],
-                             name='split_priors')
-    split_priors.inputs.splits = [1, 2, 2]
-    split_priors.inputs.squeeze = True
-    wf.connect(ants_atropos, 'posteriors', split_priors, 'inlist')
+                             name='split_posteriors')
+    split_posteriors.inputs.splits = [1, 5, 1]
+    split_posteriors.inputs.squeeze = True
+    wf.connect(ants_atropos, 'posteriors', split_posteriors, 'inlist')
 
+    add_posteriors = pe.MapNode(interface=ants.utils.ImageMath(), iterfield=['op1', 'op2'])
+    add_posteriors.inputs.operation = '+'
+    wf.connect(split_posteriors, 'out1', add_posteriors, 'op1')
+    wf.connect(split_posteriors, 'out3', add_posteriors, 'op2')
     # TODO: Add GM and cerebellum priors together
 
     #else:
@@ -175,7 +176,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     affine_reg_to_gm.inputs.write_composite_transform = True
     affine_reg_to_gm.inputs.initial_moving_transform_com = 1
     affine_reg_to_gm.inputs.output_warped_image = True
-    wf.connect(split_priors, 'out2', affine_reg_to_gm, 'moving_image')
+    wf.connect(add_posteriors, 'output_image', affine_reg_to_gm, 'moving_image')
     wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'fixed_image')
     #affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
     #                              iterfield=['in_file'],
@@ -216,7 +217,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     nonlinear_reg_to_temp.inputs.write_composite_transform = True
     nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
     nonlinear_reg_to_temp.inputs.output_warped_image = True
-    wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'moving_image')
+    wf.connect(add_posteriors, 'output_image', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'fixed_image')
     #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
     #                                   iterfield=['in_file', 'affine_file'],
@@ -245,7 +246,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         interface=util.IdentityInterface(fields=['GM_template', 'GM_files']),
         name='output_node')
     wf.connect(nonlinear_template, 'template_file', output_node, 'GM_template')
-    wf.connect(split_priors, 'out2', output_node, 'GM_files')
+    wf.connect(add_posteriors, 'output_image', output_node, 'GM_files')
 
     return wf
 
