@@ -118,13 +118,15 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
     wf.connect(deformable_priors, 'composite_transform', warp_priors, 'transforms')
 
-    generate_priors = pe.MapNode(GeneratePriors(), iterfield=['reference_file', 'prior_4D_file'], name='generate_priors')
+    generate_priors = pe.MapNode(GeneratePriors(needed_outputs=['prior_3D_files','prior_string']),
+                                 iterfield=['reference_file', 'prior_4D_file'],
+                                 name='generate_priors')
     wf.connect(input_node, 'brain_files', generate_priors, 'reference_file')
     wf.connect(warp_priors, 'output_image', generate_priors, 'prior_4D_file')
 
-    save_priors = pe.MapNode(interface=util.IdentityInterface(fields=['prior_images']), iterfield=['prior_images'],
-                             name='save_priors')
-    wf.connect(generate_priors, 'prior_3D_files', save_priors, 'prior_images')
+    #save_priors = pe.MapNode(interface=util.IdentityInterface(fields=['prior_images']), iterfield=['prior_images'],
+    #                         name='save_priors')
+    #wf.connect(generate_priors, 'prior_3D_files', save_priors, 'prior_images')
 
 
     ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'mask_image', 'prior_image'], name='ants_atropos')
