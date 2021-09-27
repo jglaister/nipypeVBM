@@ -124,6 +124,9 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     wf.connect(input_node, 'brain_files', generate_priors, 'reference_file')
     wf.connect(warp_priors, 'output_image', generate_priors, 'prior_4D_file')
 
+    merge_priors = pe.MapNode(fsl.Merge(), iterfield=['in_files'], name='merge_priors')
+    merge_priors.inputs.dimension = 't'
+    wf.connect(generate_priors, 'prior_3D_files', merge_priors, 'in_files')
     #save_priors = pe.MapNode(interface=util.IdentityInterface(fields=['prior_images']), iterfield=['prior_images'],
     #                         name='save_priors')
     #wf.connect(generate_priors, 'prior_3D_files', save_priors, 'prior_images')
