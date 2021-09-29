@@ -108,12 +108,14 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     deformable_priors.inputs.initial_moving_transform_com = 1
     #deformable_priors.inputs.output_warped_image = True
     # Template file
-    deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
+    # deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
+    deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/mni_icbm152_nlin_sym_09c/mni_icbm152_t1_tal_nlin_sym_09c_RAI.nii.gz'
     wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
 
     # Warp priors
     warp_priors = pe.MapNode(ants.ApplyTransforms(), iterfield=['reference_image', 'transforms'], name='warp_priors')
-    warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/Priors2/priors_comb_rai.nii.gz'
+    warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/mni_icbm152_nlin_sym_09c/mni_icbm152_combined_tal_nlin_sym_09c_RAI.nii.gz'
+    # warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/Priors2/priors_comb_rai.nii.gz'
     warp_priors.inputs.input_image_type = 3
     wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
     wf.connect(deformable_priors, 'composite_transform', warp_priors, 'transforms')
@@ -133,7 +135,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     ants_atropos.inputs.dimension = 3
     ants_atropos.inputs.initialization = 'PriorProbabilityImages'
     ants_atropos.inputs.prior_weighting = 0.5
-    ants_atropos.inputs.number_of_tissue_classes = 7
+    ants_atropos.inputs.number_of_tissue_classes = 4 # 7
     ants_atropos.inputs.save_posteriors = True
     wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
     wf.connect(generate_priors, 'prior_string', ants_atropos, 'prior_image')
@@ -142,14 +144,15 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     split_posteriors = pe.MapNode(interface=util.Split(),
                              iterfield=['inlist'],
                              name='split_posteriors')
-    split_posteriors.inputs.splits = [2, 1, 3, 1]
+    # split_posteriors.inputs.splits = [2, 1, 3, 1]
+    split_posteriors.inputs.splits = [2, 1, 1]
     split_posteriors.inputs.squeeze = True
     wf.connect(ants_atropos, 'posteriors', split_posteriors, 'inlist')
 
-    add_posteriors = pe.MapNode(interface=ants.utils.ImageMath(), iterfield=['op1', 'op2'], name='add_posteriors')
-    add_posteriors.inputs.operation = '+'
-    wf.connect(split_posteriors, 'out2', add_posteriors, 'op1')
-    wf.connect(split_posteriors, 'out4', add_posteriors, 'op2')
+    #add_posteriors = pe.MapNode(interface=ants.utils.ImageMath(), iterfield=['op1', 'op2'], name='add_posteriors')
+    #add_posteriors.inputs.operation = '+'
+    #wf.connect(split_posteriors, 'out2', add_posteriors, 'op1')
+    #wf.connect(split_posteriors, 'out4', add_posteriors, 'op2')
     # TODO: Add GM and cerebellum priors together
 
     #else:
@@ -176,7 +179,8 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     affine_reg_to_gm.inputs.write_composite_transform = True
     affine_reg_to_gm.inputs.initial_moving_transform_com = 1
     affine_reg_to_gm.inputs.output_warped_image = True
-    wf.connect(add_posteriors, 'output_image', affine_reg_to_gm, 'moving_image')
+    #wf.connect(add_posteriors, 'output_image', affine_reg_to_gm, 'moving_image')
+    wf.connect(split_posteriors, 'out2', affine_reg_to_gm, 'moving_image')
     wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'fixed_image')
     #affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
     #                              iterfield=['in_file'],
