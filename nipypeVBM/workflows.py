@@ -221,7 +221,8 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     nonlinear_reg_to_temp.inputs.write_composite_transform = True
     nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
     nonlinear_reg_to_temp.inputs.output_warped_image = True
-    wf.connect(add_posteriors, 'output_image', nonlinear_reg_to_temp, 'moving_image')
+    # wf.connect(add_posteriors, 'output_image', nonlinear_reg_to_temp, 'moving_image')
+    wf.connect(split_posteriors, 'out2', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'fixed_image')
     #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
     #                                   iterfield=['in_file', 'affine_file'],
@@ -250,7 +251,8 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         interface=util.IdentityInterface(fields=['GM_template', 'GM_files']),
         name='output_node')
     wf.connect(nonlinear_template, 'template_file', output_node, 'GM_template')
-    wf.connect(add_posteriors, 'output_image', output_node, 'GM_files')
+    wf.connect(split_posteriors, 'out2', output_node, 'GM_files')
+    #wf.connect(add_posteriors, 'output_image', output_node, 'GM_files')
 
     return wf
 
