@@ -109,7 +109,7 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     #deformable_priors.inputs.output_warped_image = True
     # Template file
     # deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
-    deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/mni_icbm152_nlin_sym_09c/mni_icbm152_t1_tal_nlin_sym_09c_RAI.nii.gz'
+    deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/mni_icbm152_nlin_sym_09c/mni_icbm152_t1_tal_nlin_sym_09c_masked_RAI.nii.gz'
     wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
 
     # Warp priors
