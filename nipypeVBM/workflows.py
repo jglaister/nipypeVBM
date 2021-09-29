@@ -132,10 +132,15 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
 
     ants_atropos = pe.MapNode(ants.Atropos(), iterfield=['intensity_images', 'mask_image', 'prior_image'],
                               name='ants_atropos')
+    ants_atropos.inputs.args = '--partial-volume-label-set 2x3 --partial-volume-label-set 3x4'
     ants_atropos.inputs.dimension = 3
     ants_atropos.inputs.initialization = 'PriorProbabilityImages'
-    ants_atropos.inputs.prior_weighting = 0.5
+    ants_atropos.inputs.prior_weighting = 0.25
+    ants_atropos.inputs.mrf_smoothing_factor = 0.3
+    ants_atropos.inputs.mrf_radius = [1, 1, 1]
     ants_atropos.inputs.number_of_tissue_classes = 4 # 7
+    ants_atropos.inputs.likelihood_model = 'Gaussian'
+
     ants_atropos.inputs.save_posteriors = True
     wf.connect(input_node, 'brain_files', ants_atropos, 'intensity_images')
     wf.connect(generate_priors, 'prior_string', ants_atropos, 'prior_image')
