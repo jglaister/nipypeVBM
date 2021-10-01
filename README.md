@@ -1,6 +1,6 @@
 # nipypeVBM
 
-This is a nipype implementation of the FSL VBM scripts. Modifications to the pipeline include replacing the FSL FLIRT/FNIRT registrations with ANTS Registration and replacing the FSL FAST tissue classifications with ANTS Atropos.
+This is a nipype implementation of the FSL VBM scripts. Modifications to the pipeline include replacing the FSL FLIRT/FNIRT registrations with ANTS Registration and replacing the FSL FAST tissue classifications with ANTS Atropos. Everthing else tries to faithfully reproduce the FSL VBM scripts, including splitting them into three scripts - fslvbm_1_bet, fslvbm_2_template, and fslvbm_3_proc.
 
 ## Requirements
 
