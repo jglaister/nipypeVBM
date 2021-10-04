@@ -1,16 +1,20 @@
 import os
-import glob  # system functions
 
-import nipype.interfaces.io as nio
+import nipype.pipeline.engine as pe
 import nipype.interfaces.fsl as fsl
 import nipype.interfaces.ants as ants
-import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
 from nipypeVBM.interfaces import GenerateTemplate, GeneratePriors
 
 
-def create_nipypevbm_workflow(output_root, sigma):
+def create_nipypevbm_workflow(output_root: str, sigma: float = 2) -> pe.Workflow:
+    """Run the NipypeVBM workflow from start to finish
+
+    Keyword arguments:
+    real -- the real part (default 0.0)
+    imag -- the imaginary part (default 0.0)
+    """
     wf = pe.Workflow(name='nipypevbm', base_dir=output_root)
     wf_root = os.path.join(output_root, 'nipypevbm')
 
@@ -38,7 +42,7 @@ def create_nipypevbm_workflow(output_root, sigma):
     return wf
 
 
-def create_bet_workflow(output_root):
+def create_bet_workflow(output_root: str) -> pe.Workflow:
     # Set up workflow
     wf = pe.Workflow(name='fslvbm_1_bet', base_dir=output_root)
 
@@ -63,7 +67,7 @@ def create_bet_workflow(output_root):
     return wf
 
 
-def create_preproc_workflow(output_root, gm_alg='atropos'):
+def create_preproc_workflow(output_root: str) -> pe.Workflow:
     wf = pe.Workflow(name='fslvbm_2_template', base_dir=output_root)
     wf_root = os.path.join(output_root, 'fslvbm_2_template')
 
@@ -71,22 +75,6 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         interface=util.IdentityInterface(fields=['brain_files', 'mask_files', 'GM_template']),
         name='input_node')
 
-    # if gm_alg is 'fslfast':
-    #     fsl_fast = pe.MapNode(interface=fsl.FAST(),
-    #                           iterfield=['in_files'],
-    #                           name='fsl_fast')
-    #     fsl_fast.inputs.mixel_smooth = 0.3
-    #     fsl_fast.inputs.hyper = 0.1
-    #     wf.connect(input_node, 'brain_files', fsl_fast, 'in_files')
-    #
-    #     split_priors = pe.MapNode(interface=util.Split(),
-    #                               iterfield=['inlist'],
-    #                               name='split_priors')
-    #     split_priors.inputs.splits = [1, 1, 1]
-    #     split_priors.inputs.squeeze = True
-    #     wf.connect(fsl_fast, 'partial_volume_files', split_priors, 'inlist')
-        
-    #elif gm_alg is 'atropos':
     # Register template to brain
     deformable_priors = pe.MapNode(ants.Registration(), iterfield=['fixed_image'], name='deformable_priors')
     deformable_priors.inputs.dimension = 3
@@ -106,16 +94,13 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     deformable_priors.inputs.shrink_factors = [[4, 2, 1], [4, 2, 1], [8, 4, 2]]
     deformable_priors.inputs.write_composite_transform = True
     deformable_priors.inputs.initial_moving_transform_com = 1
-    #deformable_priors.inputs.output_warped_image = True
-    # Template file
-    # deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/T_template0_BrainCerebellum_rai.nii.gz'
+    # TODO: Set prior atlas as a parameter
     deformable_priors.inputs.moving_image = '/home/j/jiwonoh/jglaist1/atlas/mni_icbm152_nlin_sym_09c/mni_icbm152_t1_tal_nlin_sym_09c_masked_RAI.nii.gz'
     wf.connect(input_node, 'brain_files', deformable_priors, 'fixed_image')
 
     # Warp priors
     warp_priors = pe.MapNode(ants.ApplyTransforms(), iterfield=['reference_image', 'transforms'], name='warp_priors')
     warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/mni_icbm152_nlin_sym_09c/mni_icbm152_combined_tal_nlin_sym_09c_RAI.nii.gz'
-    # warp_priors.inputs.input_image = '/home/j/jiwonoh/jglaist1/atlas/Oasis/MICCAI2012-Multi-Atlas-Challenge-Data/Priors2/priors_comb_rai.nii.gz'
     warp_priors.inputs.input_image_type = 3
     wf.connect(input_node, 'brain_files', warp_priors, 'reference_image')
     wf.connect(deformable_priors, 'composite_transform', warp_priors, 'transforms')
@@ -149,20 +134,9 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     split_posteriors = pe.MapNode(interface=util.Split(),
                              iterfield=['inlist'],
                              name='split_posteriors')
-    # split_posteriors.inputs.splits = [2, 1, 3, 1]
     split_posteriors.inputs.splits = [2, 1, 1]
     split_posteriors.inputs.squeeze = True
     wf.connect(ants_atropos, 'posteriors', split_posteriors, 'inlist')
-
-    #add_posteriors = pe.MapNode(interface=ants.utils.ImageMath(), iterfield=['op1', 'op2'], name='add_posteriors')
-    #add_posteriors.inputs.operation = '+'
-    #wf.connect(split_posteriors, 'out2', add_posteriors, 'op1')
-    #wf.connect(split_posteriors, 'out4', add_posteriors, 'op2')
-    # TODO: Add GM and cerebellum priors together
-
-    #else:
-    #    print('GM segmentation must be fslfast or atropos')
-
 
     # Affine registration of GM from FAST to GM template
     affine_reg_to_gm = pe.MapNode(ants.Registration(), iterfield=['moving_image'], name='affine_reg_to_GM')
@@ -184,21 +158,14 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     affine_reg_to_gm.inputs.write_composite_transform = True
     affine_reg_to_gm.inputs.initial_moving_transform_com = 1
     affine_reg_to_gm.inputs.output_warped_image = True
-    #wf.connect(add_posteriors, 'output_image', affine_reg_to_gm, 'moving_image')
     wf.connect(split_posteriors, 'out2', affine_reg_to_gm, 'moving_image')
     wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'fixed_image')
-    #affine_reg_to_gm = pe.MapNode(interface=fsl.FLIRT(),
-    #                              iterfield=['in_file'],
-    #                              name='affine_reg_to_GM')
-    #wf.connect(split_priors, 'out2', affine_reg_to_gm, 'in_file')
-    #wf.connect(input_node, 'GM_template', affine_reg_to_gm, 'reference')
 
     # Average 4D template and its flipped template to create an initial template
     affine_4d_template = pe.Node(interface=fsl.Merge(),
                                  name='affine_4D_template')
     affine_4d_template.inputs.dimension = 't'
     wf.connect(affine_reg_to_gm, 'warped_image', affine_4d_template, 'in_files')
-    #wf.connect(affine_reg_to_gm, 'out_file', affine_4d_template, 'in_files')
 
     affine_template = pe.Node(interface=GenerateTemplate(),
                               name='affine_template')
@@ -226,26 +193,13 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
     nonlinear_reg_to_temp.inputs.write_composite_transform = True
     nonlinear_reg_to_temp.inputs.initial_moving_transform_com = 1
     nonlinear_reg_to_temp.inputs.output_warped_image = True
-    # wf.connect(add_posteriors, 'output_image', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(split_posteriors, 'out2', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'fixed_image')
-    #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-    #                                   iterfield=['in_file', 'affine_file'],
-    #                                   name='nonlinear_reg_to_temp')
-    ## Check for config file in FSLDIR, otherwise uses defaults
-    ##config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    ##if os.path.exists(config_file):
-    ##    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-    ##                                                            'GM_2_MNI152GM_2mm.cnf')
-    #wf.connect(split_priors, 'out2', nonlinear_reg_to_temp, 'in_file')
-    #wf.connect(affine_template, 'template_file', nonlinear_reg_to_temp, 'ref_file')
-    #wf.connect(affine_reg_to_gm, 'out_matrix_file', nonlinear_reg_to_temp, 'affine_file')
 
     nonlinear_4d_template = pe.Node(interface=fsl.Merge(),
                                     name='nonlinear_4d_template')
     nonlinear_4d_template.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'warped_image', nonlinear_4d_template, 'in_files')
-    #wf.connect(nonlinear_reg_to_temp, 'warped_file', nonlinear_4d_template, 'in_files')
 
     # TODO: Allow for variable size cohorts instead of matched sizes
     nonlinear_template = pe.Node(interface=GenerateTemplate(),
@@ -257,12 +211,11 @@ def create_preproc_workflow(output_root, gm_alg='atropos'):
         name='output_node')
     wf.connect(nonlinear_template, 'template_file', output_node, 'GM_template')
     wf.connect(split_posteriors, 'out2', output_node, 'GM_files')
-    #wf.connect(add_posteriors, 'output_image', output_node, 'GM_files')
 
     return wf
 
 
-def create_proc_workflow(output_root, sigma=2):
+def create_proc_workflow(output_root: str, sigma: float = 2) -> pe.Workflow:
     wf = pe.Workflow(name='fslvbm_3_proc', base_dir=output_root)
 
     input_node = pe.Node(
@@ -292,17 +245,6 @@ def create_proc_workflow(output_root, sigma=2):
     nonlinear_reg_to_temp.inputs.output_warped_image = True
     wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'moving_image')
     wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'fixed_image')
-    #nonlinear_reg_to_temp = pe.MapNode(interface=fsl.FNIRT(),
-    #                                   iterfield=['in_file'],
-    #                                   name='nonlinear_reg_to_temp')
-    ## Use defaults for now
-    #config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf', 'GM_2_MNI152GM_2mm.cnf')
-    #if os.path.exists(config_file):
-    #    nonlinear_reg_to_temp.inputs.config_file = os.path.join(os.environ['FSLDIR'], 'src', 'fnirt', 'fnirtcnf',
-    #                                                            'GM_2_MNI152GM_2mm.cnf')
-    #nonlinear_reg_to_temp.inputs.jacobian_file = True
-    #wf.connect(input_node, 'GM_files', nonlinear_reg_to_temp, 'in_file')
-    #wf.connect(input_node, 'GM_template', nonlinear_reg_to_temp, 'ref_file')
 
     split_transforms = pe.MapNode(interface=util.Split(),
                               iterfield=['inlist'],
@@ -326,16 +268,13 @@ def create_proc_workflow(output_root, sigma=2):
                             name='gm_mul_jac')
     gm_mul_jac.inputs.op_string = '-mul'
     wf.connect(nonlinear_reg_to_temp, 'warped_image', gm_mul_jac, 'in_file')
-    #wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_mul_jac, 'in_file')
     wf.connect(create_jac, 'jacobian_image', gm_mul_jac, 'in_file2')
-    #wf.connect(nonlinear_reg_to_temp, 'jacobian_file', gm_mul_jac, 'in_file2')
 
     # Merge GMs
     gm_merge = pe.Node(interface=fsl.Merge(),
                                     name='gm_merge')
     gm_merge.inputs.dimension = 't'
     wf.connect(nonlinear_reg_to_temp, 'warped_image', gm_merge, 'in_files')
-    #wf.connect(nonlinear_reg_to_temp, 'warped_file', gm_merge, 'in_files')
 
     gm_mod_merge = pe.Node(interface=fsl.Merge(),
                        name='gm_mod_merge')
