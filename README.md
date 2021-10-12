@@ -12,4 +12,4 @@ Add later
 
 ## Results
 
-Abstract to be submitted to AAN/ACTRIMS 2022.
+Abstract submitted to AAN.
